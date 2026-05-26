@@ -1,0 +1,181 @@
+{
+  "lotId": 101,
+  "farmId": 11,
+  "lotCode": "HN-ZAFIRO-001",
+  "farmName": "Finca Zafiro",
+  "region": "Santa Barbara",
+  "country": "Honduras",
+  "polygon": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [-88.23512, 14.92381],
+        [-88.23291, 14.92364],
+        [-88.23276, 14.92188],
+        [-88.23533, 14.92174],
+        [-88.23512, 14.92381]
+      ]
+    ]
+  },
+  "sourceMode": "fixture",
+  "scoreVersion": "sentinel-v0.1.0",
+  "riskScore": 83,
+  "riskTier": "excellent",
+  "eudrStatus": "verified",
+  "eligibleForInvestment": true,
+  "variables": [
+    {
+      "key": "sentinel2_current_ndvi",
+      "label": "Sentinel-2 current NDVI",
+      "value": 0.74,
+      "score": 88,
+      "weight": 20,
+      "source": "sentinel-2"
+    },
+    {
+      "key": "sentinel2_ndvi_stability",
+      "label": "Sentinel-2 two-year stability",
+      "value": "stable canopy",
+      "score": 84,
+      "weight": 10,
+      "source": "sentinel-2"
+    },
+    {
+      "key": "sentinel1_moisture",
+      "label": "Sentinel-1 SAR moisture proxy",
+      "value": "medium",
+      "score": 76,
+      "weight": 10,
+      "source": "sentinel-1"
+    },
+    {
+      "key": "era5_rainfall_fit",
+      "label": "ERA5 annual rainfall fit",
+      "value": 1740,
+      "score": 86,
+      "weight": 15,
+      "source": "era5"
+    },
+    {
+      "key": "era5_temperature_distribution",
+      "label": "ERA5 seasonal temperature risk",
+      "value": 20.8,
+      "score": 80,
+      "weight": 10,
+      "source": "era5"
+    },
+    {
+      "key": "eudr_land_cover_gate",
+      "label": "EUDR post-2020 land-cover gate",
+      "value": "verified",
+      "score": 100,
+      "weight": 20,
+      "source": "eudr"
+    },
+    {
+      "key": "polygon_terrain_suitability",
+      "label": "Polygon altitude and area suitability",
+      "value": "1450 masl / 4.2 manzanas",
+      "score": 79,
+      "weight": 15,
+      "source": "polygon"
+    }
+  ],
+  "sentinel2": {
+    "currentNdvi": 0.74,
+    "twoYearAverageNdvi": 0.71,
+    "historicalSeries": [
+      {
+        "month": "2025-12",
+        "ndvi": 0.69,
+        "validPixelCoverage": 0.78,
+        "cloudCoverage": 0.21
+      },
+      {
+        "month": "2026-01",
+        "ndvi": 0.71,
+        "validPixelCoverage": 0.82,
+        "cloudCoverage": 0.17
+      },
+      {
+        "month": "2026-02",
+        "ndvi": 0.73,
+        "validPixelCoverage": 0.84,
+        "cloudCoverage": 0.15
+      },
+      {
+        "month": "2026-03",
+        "ndvi": 0.72,
+        "validPixelCoverage": 0.8,
+        "cloudCoverage": 0.2
+      },
+      {
+        "month": "2026-04",
+        "ndvi": 0.73,
+        "validPixelCoverage": 0.81,
+        "cloudCoverage": 0.18
+      },
+      {
+        "month": "2026-05",
+        "ndvi": 0.74,
+        "validPixelCoverage": 0.86,
+        "cloudCoverage": 0.14
+      }
+    ],
+    "cloudFilter": "Sentinel-2 L2A SCL cloud and shadow mask"
+  },
+  "sentinel1": {
+    "vv": -8.7,
+    "vh": -15.4,
+    "moistureProxy": "medium",
+    "structuralChangeSignal": "none"
+  },
+  "dem": {
+    "altitudeMasl": 1450,
+    "areaManzanas": 4.2,
+    "terrainSuitability": "excellent"
+  },
+  "era5": {
+    "annualRainfallMm": 1740,
+    "meanTemperatureC": 20.8,
+    "seasonalDistribution": "balanced",
+    "waterStress": "low"
+  },
+  "eudr": {
+    "baseline": "2020-12-31",
+    "post2020DeforestationDetected": false,
+    "evidenceDateRange": {
+      "from": "2021-01-01",
+      "to": "2026-05-26"
+    }
+  },
+  "yieldPredict": {
+    "projectedQuintales": 77.7,
+    "lowBandQuintales": 66.8,
+    "highBandQuintales": 87,
+    "confidence": "high",
+    "investmentArgument": "Stable Sentinel-2 canopy, verified EUDR status, balanced ERA5 rainfall, and suitable Copernicus DEM altitude support escrow-backed co-investment."
+  },
+  "evidenceHash": "e8f4c5a6d7b80913d2e1f04799a8bc6457ac0d58eaa7c27cc45a711e92f3b680",
+  "scoreHash": "e8f4c5a6d7b80913d2e1f04799a8bc6457ac0d58eaa7c27cc45a711e92f3b680",
+  "signedPayload": {
+    "payload": {
+      "lotId": 101,
+      "farmId": 11,
+      "lotCode": "HN-ZAFIRO-001",
+      "scoreVersion": "sentinel-v0.1.0",
+      "riskScore": 83,
+      "riskTier": "excellent",
+      "eudrStatus": "verified",
+      "eligibleForInvestment": true
+    },
+    "signature": "9a121c4654ff7c7c4ff1a7d0d28194c9f8f0c88e5b153372081c7c0b12d62a93",
+    "signer": "harvverse-sentinel-demo-signer"
+  },
+  "chain": {
+    "transactionHash": null,
+    "contractAddress": null,
+    "chainId": 84532,
+    "metadataStatus": "pending"
+  }
+}
