@@ -1,0 +1,36 @@
+{
+  "name": "harvverse-copernicus-hackathon",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "dev:web": "turbo run dev --filter=web",
+    "db:push": "turbo run db:push --filter=@harvverse-copernicus-hackathon/db",
+    "db:studio": "turbo run db:studio --filter=@harvverse-copernicus-hackathon/db",
+    "db:generate": "turbo run db:generate --filter=@harvverse-copernicus-hackathon/db",
+    "db:migrate": "turbo run db:migrate --filter=@harvverse-copernicus-hackathon/db",
+    "db:seed": "turbo run db:seed --filter=@harvverse-copernicus-hackathon/db",
+    "db:start": "turbo run db:start --filter=@harvverse-copernicus-hackathon/db",
+    "db:watch": "turbo run db:watch --filter=@harvverse-copernicus-hackathon/db",
+    "db:stop": "turbo run db:stop --filter=@harvverse-copernicus-hackathon/db",
+    "db:down": "turbo run db:down --filter=@harvverse-copernicus-hackathon/db"
+  },
+  "dependencies": {
+    "@harvverse-copernicus-hackathon/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@harvverse-copernicus-hackathon/config": "workspace:*",
+    "@types/node": "^22.13.14",
+    "turbo": "^2.8.12",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@10.17.1"
+}

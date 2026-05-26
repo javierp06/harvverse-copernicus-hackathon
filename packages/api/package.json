@@ -1,0 +1,27 @@
+{
+  "name": "@harvverse-copernicus-hackathon/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@harvverse-copernicus-hackathon/db": "workspace:*",
+    "@harvverse-copernicus-hackathon/env": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-orm": "^0.45.1",
+    "next": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@harvverse-copernicus-hackathon/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

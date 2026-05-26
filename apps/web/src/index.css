@@ -1,0 +1,6 @@
+@import "./fonts/stylesheet.css";
+@import "@harvverse-copernicus-hackathon/ui/globals.css";
+
+.font-trenda {
+	font-family: "Trenda", sans-serif;
+}
