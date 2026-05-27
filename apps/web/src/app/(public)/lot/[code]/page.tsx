@@ -15,6 +15,7 @@ import {
   Satellite,
   ShieldCheck,
   Sprout,
+  TriangleAlert,
   TrendingUp,
 } from "lucide-react";
 
@@ -57,6 +58,14 @@ type SnapshotDataQuality = {
   };
   warnings: string[];
   limitations: string[];
+  parcelScale: {
+    areaManzanas: number | null;
+    areaHectares: number | null;
+    sentinel2PixelEstimate: number | null;
+    sentinel1IwCellEstimate: number | null;
+    confidence: "low" | "medium" | "high";
+    warning: string | null;
+  };
 };
 
 type CopernicusSnapshotView = {
@@ -142,6 +151,7 @@ function asSnapshot(value: unknown): CopernicusSnapshotView | null {
       limitations: Array.isArray(dataQualityRecord?.limitations)
         ? dataQualityRecord.limitations.map(String)
         : [],
+      parcelScale: parseParcelScale(dataQualityRecord?.parcelScale),
     },
     sentinel2: (asRecord(record.sentinel2) ?? {}) as CopernicusSnapshotView["sentinel2"],
     sentinel1: (asRecord(record.sentinel1) ?? {}) as CopernicusSnapshotView["sentinel1"],
@@ -173,6 +183,26 @@ function shortHash(hash: string) {
 function numberValue(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function nullableNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseParcelScale(value: unknown): SnapshotDataQuality["parcelScale"] {
+  const record = asRecord(value);
+  return {
+    areaManzanas: nullableNumber(record?.areaManzanas),
+    areaHectares: nullableNumber(record?.areaHectares),
+    sentinel2PixelEstimate: nullableNumber(record?.sentinel2PixelEstimate),
+    sentinel1IwCellEstimate: nullableNumber(record?.sentinel1IwCellEstimate),
+    confidence:
+      record?.confidence === "high" || record?.confidence === "low"
+        ? record.confidence
+        : "medium",
+    warning: record?.warning == null ? null : String(record.warning),
+  };
 }
 
 export default function PublicLotProofPage() {
@@ -333,6 +363,23 @@ export default function PublicLotProofPage() {
                 <ProofRow label="Metadata" value={snapshot.chain.metadataStatus} />
                 <ProofRow label="Confidence" value={snapshot.dataQuality.confidence} />
                 <ProofRow label="Completeness" value={`${Math.round(snapshot.dataQuality.completeness * 100)}%`} />
+                <ProofRow label="Parcel confidence" value={snapshot.dataQuality.parcelScale.confidence} />
+                <ProofRow
+                  label="S2 pixels"
+                  value={
+                    snapshot.dataQuality.parcelScale.sentinel2PixelEstimate == null
+                      ? "Unknown"
+                      : `~${snapshot.dataQuality.parcelScale.sentinel2PixelEstimate}`
+                  }
+                />
+                <ProofRow
+                  label="S1 IW cells"
+                  value={
+                    snapshot.dataQuality.parcelScale.sentinel1IwCellEstimate == null
+                      ? "Unknown"
+                      : `~${snapshot.dataQuality.parcelScale.sentinel1IwCellEstimate}`
+                  }
+                />
                 <ProofRow
                   label="Score cap"
                   value={
@@ -360,9 +407,14 @@ export default function PublicLotProofPage() {
                 </div>
               ) : null}
               {snapshot.dataQuality.warnings.length > 0 ? (
-                <p className="mt-4 text-xs leading-5 text-yellow-200/75">
-                  {snapshot.dataQuality.warnings[0]}
-                </p>
+                <div className="mt-4 space-y-2">
+                  {snapshot.dataQuality.warnings.slice(0, 3).map((warning) => (
+                    <div key={warning} className="flex gap-2 text-xs leading-5 text-yellow-200/75">
+                      <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+                      <p>{warning}</p>
+                    </div>
+                  ))}
+                </div>
               ) : null}
             </GlassCard>
           </div>

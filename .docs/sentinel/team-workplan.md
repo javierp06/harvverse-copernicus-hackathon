@@ -29,6 +29,8 @@ Required fields:
 - `eudrStatus`: `verified`, `non_compliant`, or `unknown`
 - `eligibleForInvestment`
 - `variables`: seven weighted Copernicus score variables
+- `sources`: Copernicus provider and dataset provenance for each signal
+- `dataQuality`: confidence, completeness, warnings, limitations, and parcel-scale satellite confidence
 - `sentinel2`: NDVI current value, historical series, cloud-filter details
 - `sentinel1`: VV/VH, moisture proxy, structural-change signal
 - `dem`: altitude, slope or terrain suitability

@@ -58,6 +58,14 @@ export interface CopernicusDataQuality {
   };
   warnings: string[];
   limitations: string[];
+  parcelScale: {
+    areaManzanas: number | null;
+    areaHectares: number | null;
+    sentinel2PixelEstimate: number | null;
+    sentinel1IwCellEstimate: number | null;
+    confidence: SourceConfidence;
+    warning: string | null;
+  };
 }
 
 export interface CopernicusLotSnapshot {
@@ -159,6 +167,7 @@ const SCORE_VERSION = "sentinel-v0.1.0";
 const SENTINEL2_LIVE_SCORE_VERSION = "sentinel-s2-live-v0.1.0";
 const DEMO_SIGNER = "harvverse-sentinel-demo-signer";
 const SENTINEL2_LIVE_SIGNER = "harvverse-sentinel-2-worker";
+const HECTARES_PER_MANZANA = 0.6989;
 
 function toNumber(value: string | number | null | undefined): number | null {
   if (value == null) return null;
@@ -230,6 +239,46 @@ function weightedScore(variables: SentinelScoreVariable[]): number {
   );
 }
 
+function lowerConfidence(
+  first: SourceConfidence,
+  second: SourceConfidence,
+): SourceConfidence {
+  const order: Record<SourceConfidence, number> = { low: 0, medium: 1, high: 2 };
+  return order[first] <= order[second] ? first : second;
+}
+
+function buildParcelScaleQuality(areaManzanas: number | null) {
+  if (areaManzanas == null || areaManzanas <= 0) {
+    return {
+      areaManzanas: null,
+      areaHectares: null,
+      sentinel2PixelEstimate: null,
+      sentinel1IwCellEstimate: null,
+      confidence: "medium" as const,
+      warning: "Parcel area is missing, so satellite confidence cannot be adjusted by lot size.",
+    };
+  }
+
+  const areaHectares = Number((areaManzanas * HECTARES_PER_MANZANA).toFixed(2));
+  const sentinel2PixelEstimate = Math.round(areaHectares * 100);
+  const sentinel1IwCellEstimate = Number(((areaHectares * 10_000) / 1_600).toFixed(1));
+  const isTinyLot = areaManzanas < 1.5;
+  const isSmallLot = areaManzanas < 3;
+
+  return {
+    areaManzanas: Number(areaManzanas.toFixed(2)),
+    areaHectares,
+    sentinel2PixelEstimate,
+    sentinel1IwCellEstimate,
+    confidence: isTinyLot ? "low" as const : isSmallLot ? "medium" as const : "high" as const,
+    warning: isTinyLot
+      ? "Parcel-scale caution: this lot is near one manzana, so Sentinel signals support trend evidence, not plant-level diagnosis."
+      : isSmallLot
+        ? "Small parcel: Sentinel signals should be interpreted with polygon accuracy and field context."
+        : null,
+  };
+}
+
 export function buildFixtureCopernicusSnapshot(
   lot: SnapshotLotInput,
 ): CopernicusLotSnapshot {
@@ -246,6 +295,7 @@ export function buildFixtureCopernicusSnapshot(
   const annualRainfallMm = 1680 + ((lot.id % 4) * 45);
   const meanTemperatureC = Number((20.8 + ((lot.id % 3) * 0.4)).toFixed(1));
   const eudrStatus: EudrStatus = "verified";
+  const parcelScale = buildParcelScaleQuality(areaManzanas);
   const variables: SentinelScoreVariable[] = [
     {
       key: "sentinel2_current_ndvi",
@@ -360,7 +410,7 @@ export function buildFixtureCopernicusSnapshot(
     },
   ];
   const dataQuality: CopernicusDataQuality = {
-    confidence: "medium",
+    confidence: lowerConfidence("medium", parcelScale.confidence),
     completeness: 0.82,
     scoreCap: {
       applied: false,
@@ -370,11 +420,14 @@ export function buildFixtureCopernicusSnapshot(
     warnings: [
       "Fixture mode: provider calls are not executed yet.",
       "Base L2 metadata write is pending.",
+      ...(parcelScale.warning ? [parcelScale.warning] : []),
     ],
     limitations: [
       "This deterministic demo snapshot is not a final financing decision.",
       "EUDR status must be re-computed from live land-cover evidence before production use.",
+      "Sentinel-1 IW GRD is treated as a contextual proxy for small lots, not a precise parcel-level soil moisture measurement.",
     ],
+    parcelScale,
   };
   const unsignedPayload = {
     lotId: lot.id,
@@ -540,6 +593,7 @@ export async function buildSentinel2CopernicusSnapshot(
   const riskTier = riskTierFor(riskScore);
   const eudrStatus: EudrStatus = "unknown";
   const eligibleForInvestment = false;
+  const parcelScale = buildParcelScaleQuality(toNumber(lot.areaManzanas) ?? fixture.dem.areaManzanas);
   const sources = fixture.sources.map((source) =>
     source.key === "sentinel-2"
       ? {
@@ -554,13 +608,16 @@ export async function buildSentinel2CopernicusSnapshot(
         }
       : source,
   );
-  const dataQuality = {
+  const liveConfidence = usableMonths.length >= 18 ? "high" as const : "medium" as const;
+  const dataQuality: CopernicusDataQuality = {
     ...fixture.dataQuality,
-    confidence: usableMonths.length >= 18 ? "high" as const : "medium" as const,
+    confidence: lowerConfidence(liveConfidence, parcelScale.confidence),
     completeness: Number(Math.min(0.95, usableMonths.length / 24).toFixed(2)),
     warnings: [
       "Sentinel-2 NDVI is live; Sentinel-1, ERA5, DEM, and EUDR are still fixture or pending fields.",
+      ...(parcelScale.warning ? [parcelScale.warning] : []),
     ],
+    parcelScale,
   };
   const unsignedPayload = {
     lotId: lot.id,
