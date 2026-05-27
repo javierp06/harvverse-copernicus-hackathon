@@ -173,6 +173,18 @@ export const HarvverseLotAbi = [
     anonymous: false,
     inputs: [
       { indexed: true, internalType: "bytes32", name: "lotId", type: "bytes32" },
+      { indexed: false, internalType: "uint8", name: "riskScore", type: "uint8" },
+      { indexed: false, internalType: "bool", name: "eudrCompliant", type: "bool" },
+      { indexed: false, internalType: "bytes32", name: "scoreHash", type: "bytes32" },
+      { indexed: false, internalType: "string", name: "scoreVersion", type: "string" },
+    ],
+    name: "CopernicusScoreUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "bytes32", name: "lotId", type: "bytes32" },
       { indexed: true, internalType: "address", name: "farmer", type: "address" },
     ],
     name: "LotCreated",
@@ -199,6 +211,26 @@ export const HarvverseLotAbi = [
     name: "createLot",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "bytes32", name: "lotId", type: "bytes32" }],
+    name: "getCopernicusScore",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint8", name: "riskScore", type: "uint8" },
+          { internalType: "bool", name: "eudrCompliant", type: "bool" },
+          { internalType: "bytes32", name: "scoreHash", type: "bytes32" },
+          { internalType: "string", name: "scoreVersion", type: "string" },
+          { internalType: "uint64", name: "updatedAt", type: "uint64" },
+        ],
+        internalType: "struct HarvverseLot.CopernicusScore",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -232,6 +264,13 @@ export const HarvverseLotAbi = [
     type: "function",
   },
   {
+    inputs: [{ internalType: "bytes32", name: "lotId", type: "bytes32" }],
+    name: "isInvestmentEligible",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       { internalType: "bytes32", name: "role", type: "bytes32" },
       { internalType: "address", name: "account", type: "address" },
@@ -249,6 +288,19 @@ export const HarvverseLotAbi = [
     name: "hasRole",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "bytes32", name: "lotId", type: "bytes32" },
+      { internalType: "uint8", name: "riskScore", type: "uint8" },
+      { internalType: "bool", name: "eudrCompliant", type: "bool" },
+      { internalType: "bytes32", name: "scoreHash", type: "bytes32" },
+      { internalType: "string", name: "scoreVersion", type: "string" },
+    ],
+    name: "updateCopernicusScore",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {

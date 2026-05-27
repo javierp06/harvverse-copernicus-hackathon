@@ -19,6 +19,8 @@ interface IHarvverseLot {
     );
 
     function updateLotStatus(bytes32 lotId, uint8 newStatus) external;
+
+    function isInvestmentEligible(bytes32 lotId) external view returns (bool);
 }
 
 /// @dev Escrows USDC investment tickets and settles revenue at harvest.
@@ -69,6 +71,7 @@ contract HarvversePartnership is AccessControl, ReentrancyGuard {
         uint32 ticketCents
     ) external nonReentrant {
         require(partnerships[partnershipId].ticketCents == 0, "Partnership already exists");
+        require(lotContract.isInvestmentEligible(lotId), "Lot not Copernicus eligible");
 
         uint256 usdcAmount = uint256(ticketCents) * CENTS_TO_USDC;
         usdc.safeTransferFrom(msg.sender, address(this), usdcAmount);
