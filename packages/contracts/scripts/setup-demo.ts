@@ -21,10 +21,13 @@ import path from "path";
 // Finca Zafiro demo lot — must match seed.ts values
 const DEMO_LOT_CODE = "HV-HN-ZAF-L02";
 const DEMO_LOT = {
-  targetYieldTenthsQq: 60,
+  targetYieldTenthsQq: 600,
   priceCentsPerLb: 350,
   ticketCents: 342500,
   farmerShareBps: 6000,
+  copernicusRiskScore: 83,
+  eudrCompliant: true,
+  copernicusScoreVersion: "sentinel-live-v0.2.0",
 } as const;
 
 async function main() {
@@ -76,6 +79,20 @@ async function main() {
   );
   console.log(`Registered lot ${DEMO_LOT_CODE} on-chain (id: ${onchainLotId.slice(0, 10)}…)`);
 
+  const scoreHash = ethers.keccak256(
+    ethers.toUtf8Bytes(`${DEMO_LOT_CODE}:${DEMO_LOT.copernicusScoreVersion}:demo-copernicus-score`),
+  );
+  await lotContract.updateCopernicusScore(
+    onchainLotId,
+    DEMO_LOT.copernicusRiskScore,
+    DEMO_LOT.eudrCompliant,
+    scoreHash,
+    DEMO_LOT.copernicusScoreVersion,
+  );
+  console.log(
+    `Recorded Copernicus score ${DEMO_LOT.copernicusRiskScore}/100 and EUDR verified gate`,
+  );
+
   // 4 — Mint 10,000 mock USDC to demo partner
   const mintAmount = ethers.parseUnits("10000", 6);
   await usdc.mint(demoPartner.address, mintAmount);
@@ -123,6 +140,7 @@ async function main() {
         !l.startsWith("NEXT_PUBLIC_USE_LOCAL_CONTRACTS") &&
         !l.startsWith("NEXT_PUBLIC_HARDHAT_CHAIN_ID") &&
         !l.startsWith("NEXT_PUBLIC_USDC_ADDRESS") &&
+        !l.startsWith("NEXT_PUBLIC_LOT_ADDRESS") &&
         !l.startsWith("NEXT_PUBLIC_PARTNERSHIP_ADDRESS"),
     );
 
@@ -132,6 +150,7 @@ async function main() {
     "NEXT_PUBLIC_USE_LOCAL_CONTRACTS=true",
     "NEXT_PUBLIC_HARDHAT_CHAIN_ID=31337",
     `NEXT_PUBLIC_USDC_ADDRESS=${usdcAddress}`,
+    `NEXT_PUBLIC_LOT_ADDRESS=${lotAddress}`,
     `NEXT_PUBLIC_PARTNERSHIP_ADDRESS=${partnershipAddress}`,
   ];
 
