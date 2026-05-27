@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
 
+import {
+  fetchSentinel2NdviMonths,
+  type Sentinel2Polygon,
+} from "./copernicus/sentinel-2";
+
 export type CopernicusSourceMode = "fixture" | "live";
 export type RiskTier =
   | "excellent"
@@ -151,7 +156,9 @@ interface SnapshotLotInput {
 }
 
 const SCORE_VERSION = "sentinel-v0.1.0";
+const SENTINEL2_LIVE_SCORE_VERSION = "sentinel-s2-live-v0.1.0";
 const DEMO_SIGNER = "harvverse-sentinel-demo-signer";
+const SENTINEL2_LIVE_SIGNER = "harvverse-sentinel-2-worker";
 
 function toNumber(value: string | number | null | undefined): number | null {
   if (value == null) return null;
@@ -184,6 +191,43 @@ function buildFixtureNdviSeries(lotId: number) {
 
 function hashJson(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function asSentinel2Polygon(value: unknown): Sentinel2Polygon | null {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "coordinates" in value &&
+    Array.isArray((value as { coordinates?: unknown }).coordinates)
+  ) {
+    return value as Sentinel2Polygon;
+  }
+  return null;
+}
+
+function scoreNdviAverage(avg: number): number {
+  if (avg < 0.3) return 0;
+  if (avg <= 0.5) return ((avg - 0.3) / 0.2) * 100;
+  return 100;
+}
+
+function scoreNdviStability(values: number[]): number {
+  const clean = values.filter((value) => value >= 0.2);
+  if (clean.length < 6) return 50;
+  const mean = clean.reduce((sum, value) => sum + value, 0) / clean.length;
+  if (mean === 0) return 50;
+  const variance = clean.reduce((sum, value) => sum + (value - mean) ** 2, 0) / clean.length;
+  const cv = Math.sqrt(variance) / mean;
+  if (cv <= 0.05) return 100;
+  if (cv >= 0.3) return 0;
+  return 100 - ((cv - 0.05) / 0.25) * 100;
+}
+
+function weightedScore(variables: SentinelScoreVariable[]): number {
+  return Math.round(
+    variables.reduce((sum, variable) => sum + variable.score * variable.weight, 0) /
+      variables.reduce((sum, variable) => sum + variable.weight, 0),
+  );
 }
 
 export function buildFixtureCopernicusSnapshot(
@@ -428,6 +472,154 @@ export function buildFixtureCopernicusSnapshot(
       contractAddress: null,
       chainId: 84532,
       metadataStatus: "pending",
+    },
+  };
+}
+
+export async function buildSentinel2CopernicusSnapshot(
+  lot: SnapshotLotInput,
+  token: string,
+): Promise<CopernicusLotSnapshot> {
+  const polygon = asSentinel2Polygon(lot.polygon);
+  if (!polygon) {
+    throw new Error("Live Sentinel-2 scoring requires a lot polygon.");
+  }
+
+  const fixture = buildFixtureCopernicusSnapshot(lot);
+  const ndviMonths = await fetchSentinel2NdviMonths({ token, polygon });
+  const usableMonths = ndviMonths.filter(
+    (month): month is typeof month & { ndvi: number } => month.ndvi != null,
+  );
+
+  if (usableMonths.length === 0) {
+    throw new Error("Sentinel-2 returned no usable NDVI observations for this polygon.");
+  }
+
+  const currentNdvi = usableMonths.at(-1)?.ndvi ?? 0;
+  const twoYearAverageNdvi = Number(
+    (
+      usableMonths.reduce((sum, month) => sum + month.ndvi, 0) /
+      usableMonths.length
+    ).toFixed(4),
+  );
+  const ndviAverageScore = Math.round(scoreNdviAverage(twoYearAverageNdvi));
+  const ndviStabilityScore = Math.round(
+    scoreNdviStability(usableMonths.map((month) => month.ndvi)),
+  );
+  const historicalSeries = usableMonths.map((month) => ({
+    month: month.month,
+    ndvi: month.ndvi,
+    validPixelCoverage: month.validPixelCoverage ?? 0,
+    cloudCoverage: month.cloudCoverage ?? 0,
+  }));
+  const variables = fixture.variables.map((variable) => {
+    if (variable.key === "sentinel2_current_ndvi") {
+      return {
+        ...variable,
+        value: currentNdvi,
+        score: ndviAverageScore,
+      };
+    }
+    if (variable.key === "sentinel2_ndvi_stability") {
+      return {
+        ...variable,
+        value: "live Sentinel-2",
+        score: ndviStabilityScore,
+      };
+    }
+    if (variable.key === "eudr_land_cover_gate") {
+      return {
+        ...variable,
+        value: "unknown",
+        score: 50,
+      };
+    }
+    return variable;
+  });
+  const riskScore = weightedScore(variables);
+  const riskTier = riskTierFor(riskScore);
+  const eudrStatus: EudrStatus = "unknown";
+  const eligibleForInvestment = false;
+  const sources = fixture.sources.map((source) =>
+    source.key === "sentinel-2"
+      ? {
+          ...source,
+          mode: "live" as const,
+          dateRange: {
+            from: historicalSeries[0]?.month ?? source.dateRange.from,
+            to: historicalSeries.at(-1)?.month ?? source.dateRange.to,
+          },
+          notes:
+            "Live NDVI uses Sentinel-2 L2A Statistics API with SCL cloud and shadow masking.",
+        }
+      : source,
+  );
+  const dataQuality = {
+    ...fixture.dataQuality,
+    confidence: usableMonths.length >= 18 ? "high" as const : "medium" as const,
+    completeness: Number(Math.min(0.95, usableMonths.length / 24).toFixed(2)),
+    warnings: [
+      "Sentinel-2 NDVI is live; Sentinel-1, ERA5, DEM, and EUDR are still fixture or pending fields.",
+    ],
+  };
+  const unsignedPayload = {
+    lotId: lot.id,
+    farmId: lot.farmId,
+    lotCode: lot.code ?? null,
+    scoreVersion: SENTINEL2_LIVE_SCORE_VERSION,
+    riskScore,
+    riskTier,
+    eudrStatus,
+    eligibleForInvestment,
+    variables,
+    sources,
+    dataQuality,
+  };
+  const evidenceHash = hashJson({
+    ...unsignedPayload,
+    polygon: lot.polygon ?? null,
+    sentinel2: historicalSeries,
+  });
+  const signature = hashJson({
+    signer: SENTINEL2_LIVE_SIGNER,
+    evidenceHash,
+  });
+
+  return {
+    ...fixture,
+    sourceMode: "live",
+    scoreVersion: SENTINEL2_LIVE_SCORE_VERSION,
+    riskScore,
+    riskTier,
+    eudrStatus,
+    eligibleForInvestment,
+    variables,
+    sources,
+    dataQuality,
+    sentinel2: {
+      currentNdvi,
+      twoYearAverageNdvi,
+      historicalSeries,
+      cloudFilter: "Sentinel-2 L2A SCL cloud and shadow mask",
+    },
+    eudr: {
+      ...fixture.eudr,
+      riskLevel: "review_required",
+      requiresManualReview: true,
+      confidence: "medium",
+      reasons: [
+        "Sentinel-2 NDVI is live, but JRC forest-loss screening is not implemented yet.",
+      ],
+      limitations: [
+        "This slice verifies vegetation evidence only; it is not a final EUDR decision.",
+      ],
+    },
+    evidenceHash,
+    scoreHash: evidenceHash,
+    signedPayload: {
+      payload: unsignedPayload,
+      signature,
+      signer: SENTINEL2_LIVE_SIGNER,
     },
   };
 }

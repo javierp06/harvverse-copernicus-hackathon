@@ -18,8 +18,14 @@ import { and, desc, eq, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, publicProcedure, router } from "../index";
-import { getSentinelHubCredentials } from "../lib/copernicus/sentinel-hub";
-import { buildFixtureCopernicusSnapshot } from "../lib/copernicus";
+import {
+  getSentinelHubCredentials,
+  getSentinelHubToken,
+} from "../lib/copernicus/sentinel-hub";
+import {
+  buildFixtureCopernicusSnapshot,
+  buildSentinel2CopernicusSnapshot,
+} from "../lib/copernicus";
 
 const lotStatusSchema = z.enum(lotStatusEnum.enumValues);
 const copernicusSourceModeSchema = z.enum(copernicusSourceModeEnum.enumValues);
@@ -311,23 +317,30 @@ export const lotsRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "You cannot score this lot" });
       }
 
-      if (input.sourceMode === "live") {
-        const credentials = getSentinelHubCredentials(env);
-        if (!credentials) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Live Copernicus scoring requires SENTINEL_HUB_CLIENT_ID and SENTINEL_HUB_CLIENT_SECRET.",
-          });
-        }
-
-        throw new TRPCError({
-          code: "NOT_IMPLEMENTED",
-          message: "Live Copernicus scoring credentials are configured; Sentinel-2 fetch is the next implementation slice.",
-        });
-      }
-
-      const snapshot = buildFixtureCopernicusSnapshot(lot);
+      const snapshot =
+        input.sourceMode === "live"
+          ? await (async () => {
+              const credentials = getSentinelHubCredentials(env);
+              if (!credentials) {
+                throw new TRPCError({
+                  code: "BAD_REQUEST",
+                  message:
+                    "Live Copernicus scoring requires SENTINEL_HUB_CLIENT_ID and SENTINEL_HUB_CLIENT_SECRET.",
+                });
+              }
+              const token = await getSentinelHubToken(credentials);
+              return buildSentinel2CopernicusSnapshot(lot, token);
+            })().catch((error: unknown) => {
+              if (error instanceof TRPCError) throw error;
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "Live Sentinel-2 Copernicus scoring failed.",
+              });
+            })
+          : buildFixtureCopernicusSnapshot(lot);
 
       return ctx.db.transaction(async (tx) => {
         const [created] = await tx
