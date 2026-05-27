@@ -25,6 +25,7 @@ function setup() {
     output: [
       { id: "ndvi", bands: 1, sampleType: "FLOAT32" },
       { id: "dataMask", bands: 1, sampleType: "FLOAT32" },
+      { id: "validMask", bands: 1, sampleType: "FLOAT32" },
       { id: "cloudMask", bands: 1, sampleType: "FLOAT32" }
     ]
   };
@@ -35,7 +36,8 @@ function evaluatePixel(s) {
   const ndvi = valid ? (s.B08 - s.B04) / (s.B08 + s.B04) : NaN;
   return {
     ndvi: [ndvi],
-    dataMask: [valid ? 1 : 0],
+    dataMask: [s.dataMask],
+    validMask: [valid ? 1 : 0],
     cloudMask: [isCloud ? 1 : 0]
   };
 }`;
@@ -153,7 +155,7 @@ export async function fetchSentinel2NdviMonths({
       interval: { from: string };
       outputs?: {
         ndvi?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
-        dataMask?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
+        validMask?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
         cloudMask?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
       };
     }>;
@@ -166,7 +168,7 @@ export async function fetchSentinel2NdviMonths({
       4,
     ),
     validPixelCoverage: roundedOrNull(
-      Object.values(interval.outputs?.dataMask?.bands ?? {})[0]?.stats?.mean,
+      Object.values(interval.outputs?.validMask?.bands ?? {})[0]?.stats?.mean,
       4,
     ),
     cloudCoverage: roundedOrNull(
