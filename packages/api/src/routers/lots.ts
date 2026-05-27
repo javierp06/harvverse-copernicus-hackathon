@@ -12,11 +12,13 @@ import {
   proposals,
   users,
 } from "@harvverse-copernicus-hackathon/db/schema";
+import { env } from "@harvverse-copernicus-hackathon/env/server";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, publicProcedure, router } from "../index";
+import { getSentinelHubCredentials } from "../lib/copernicus/sentinel-hub";
 import { buildFixtureCopernicusSnapshot } from "../lib/copernicus";
 
 const lotStatusSchema = z.enum(lotStatusEnum.enumValues);
@@ -310,9 +312,18 @@ export const lotsRouter = router({
       }
 
       if (input.sourceMode === "live") {
+        const credentials = getSentinelHubCredentials(env);
+        if (!credentials) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Live Copernicus scoring requires SENTINEL_HUB_CLIENT_ID and SENTINEL_HUB_CLIENT_SECRET.",
+          });
+        }
+
         throw new TRPCError({
           code: "NOT_IMPLEMENTED",
-          message: "Live Copernicus scoring will use this same snapshot contract.",
+          message: "Live Copernicus scoring credentials are configured; Sentinel-2 fetch is the next implementation slice.",
         });
       }
 
