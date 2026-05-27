@@ -15,6 +15,13 @@
       "when": 1779825278901,
       "tag": "0001_stiff_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779849322149,
+      "tag": "0002_lyrical_starbolt",
+      "breakpoints": true
     }
   ]
 }

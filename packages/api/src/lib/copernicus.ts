@@ -14,6 +14,12 @@ export type VariableSource =
   | "era5"
   | "polygon"
   | "eudr";
+export type SourceConfidence = "low" | "medium" | "high";
+export type EudrRiskLevel =
+  | "low_risk"
+  | "review_required"
+  | "high_risk"
+  | "unknown";
 
 export interface SentinelScoreVariable {
   key: string;
@@ -22,6 +28,31 @@ export interface SentinelScoreVariable {
   score: number;
   weight: number;
   source: VariableSource;
+}
+
+export interface CopernicusSourceMetadata {
+  key: VariableSource | "dem";
+  provider: string;
+  dataset: string;
+  mode: CopernicusSourceMode;
+  dateRange: {
+    from: string;
+    to: string;
+  };
+  resolution: string | null;
+  notes: string;
+}
+
+export interface CopernicusDataQuality {
+  confidence: SourceConfidence;
+  completeness: number;
+  scoreCap: {
+    applied: boolean;
+    maxScore: number | null;
+    reason: string | null;
+  };
+  warnings: string[];
+  limitations: string[];
 }
 
 export interface CopernicusLotSnapshot {
@@ -35,6 +66,8 @@ export interface CopernicusLotSnapshot {
   eudrStatus: EudrStatus;
   eligibleForInvestment: boolean;
   variables: SentinelScoreVariable[];
+  sources: CopernicusSourceMetadata[];
+  dataQuality: CopernicusDataQuality;
   sentinel2: {
     currentNdvi: number;
     twoYearAverageNdvi: number;
@@ -65,7 +98,12 @@ export interface CopernicusLotSnapshot {
   };
   eudr: {
     baseline: "2020-12-31";
+    riskLevel: EudrRiskLevel;
     post2020DeforestationDetected: boolean;
+    requiresManualReview: boolean;
+    confidence: SourceConfidence;
+    reasons: string[];
+    limitations: string[];
     evidenceDateRange: {
       from: string;
       to: string;
@@ -229,6 +267,71 @@ export function buildFixtureCopernicusSnapshot(
   const riskTier = riskTierFor(riskScore);
   const eligibleForInvestment = eudrStatus === "verified" && riskScore >= 60;
   const projectedQuintales = Number((areaManzanas * 18.5).toFixed(1));
+  const evidenceTo = "2026-05-26";
+  const sources: CopernicusSourceMetadata[] = [
+    {
+      key: "sentinel-2",
+      provider: "Copernicus Data Space Ecosystem / Sentinel Hub",
+      dataset: "sentinel-2-l2a",
+      mode: "fixture",
+      dateRange: { from: "2024-06-01", to: evidenceTo },
+      resolution: "10m",
+      notes: "NDVI fixture follows the live Sentinel-2 L2A Statistics API contract with SCL cloud and shadow masking.",
+    },
+    {
+      key: "sentinel-1",
+      provider: "Copernicus Data Space Ecosystem / Sentinel Hub",
+      dataset: "sentinel-1-grd",
+      mode: "fixture",
+      dateRange: { from: "2024-06-01", to: evidenceTo },
+      resolution: "10m",
+      notes: "SAR fixture preserves the VV/VH and moisture-proxy fields expected from the live radar path.",
+    },
+    {
+      key: "dem",
+      provider: "Copernicus DEM",
+      dataset: "copernicus_dem_glo30",
+      mode: "fixture",
+      dateRange: { from: "2020-01-01", to: evidenceTo },
+      resolution: "30m",
+      notes: "Altitude is derived from lot data in fixture mode and will be replaced by DEM centroid sampling in live mode.",
+    },
+    {
+      key: "era5",
+      provider: "Copernicus Climate Change Service via Open-Meteo Archive",
+      dataset: "ERA5 reanalysis",
+      mode: "fixture",
+      dateRange: { from: "2024-06-01", to: evidenceTo },
+      resolution: "daily aggregate",
+      notes: "Climate fixture matches the annual rainfall, temperature, and stress fields expected from live ERA5 aggregation.",
+    },
+    {
+      key: "eudr",
+      provider: "Copernicus/JRC reference baseline",
+      dataset: "JRC Global Forest Cover 2020",
+      mode: "fixture",
+      dateRange: { from: "2020-12-31", to: evidenceTo },
+      resolution: null,
+      notes: "EUDR fixture models the post-December 2020 deforestation gate; live mode must replace it with polygon screening evidence.",
+    },
+  ];
+  const dataQuality: CopernicusDataQuality = {
+    confidence: "medium",
+    completeness: 0.82,
+    scoreCap: {
+      applied: false,
+      maxScore: null,
+      reason: null,
+    },
+    warnings: [
+      "Fixture mode: provider calls are not executed yet.",
+      "Base L2 metadata write is pending.",
+    ],
+    limitations: [
+      "This deterministic demo snapshot is not a final financing decision.",
+      "EUDR status must be re-computed from live land-cover evidence before production use.",
+    ],
+  };
   const unsignedPayload = {
     lotId: lot.id,
     farmId: lot.farmId,
@@ -239,6 +342,8 @@ export function buildFixtureCopernicusSnapshot(
     eudrStatus,
     eligibleForInvestment,
     variables,
+    sources,
+    dataQuality,
   };
   const evidenceHash = hashJson({
     ...unsignedPayload,
@@ -260,6 +365,8 @@ export function buildFixtureCopernicusSnapshot(
     eudrStatus,
     eligibleForInvestment,
     variables,
+    sources,
+    dataQuality,
     sentinel2: {
       currentNdvi,
       twoYearAverageNdvi,
@@ -285,10 +392,20 @@ export function buildFixtureCopernicusSnapshot(
     },
     eudr: {
       baseline: "2020-12-31",
+      riskLevel: "low_risk",
       post2020DeforestationDetected: false,
+      requiresManualReview: false,
+      confidence: "medium",
+      reasons: [
+        "No fixture signal of post-2020 tree-cover loss inside the lot polygon.",
+        "Lot remains eligible because the EUDR gate is verified in this demo snapshot.",
+      ],
+      limitations: [
+        "Fixture mode does not query the live JRC forest baseline or Sentinel-2 change detection yet.",
+      ],
       evidenceDateRange: {
         from: "2021-01-01",
-        to: "2026-05-26",
+        to: evidenceTo,
       },
     },
     yieldPredict: {

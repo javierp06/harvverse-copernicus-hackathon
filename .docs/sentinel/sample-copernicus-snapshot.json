@@ -81,6 +81,85 @@
       "source": "polygon"
     }
   ],
+  "sources": [
+    {
+      "key": "sentinel-2",
+      "provider": "Copernicus Data Space Ecosystem / Sentinel Hub",
+      "dataset": "sentinel-2-l2a",
+      "mode": "fixture",
+      "dateRange": {
+        "from": "2024-06-01",
+        "to": "2026-05-26"
+      },
+      "resolution": "10m",
+      "notes": "NDVI fixture follows the live Sentinel-2 L2A Statistics API contract with SCL cloud and shadow masking."
+    },
+    {
+      "key": "sentinel-1",
+      "provider": "Copernicus Data Space Ecosystem / Sentinel Hub",
+      "dataset": "sentinel-1-grd",
+      "mode": "fixture",
+      "dateRange": {
+        "from": "2024-06-01",
+        "to": "2026-05-26"
+      },
+      "resolution": "10m",
+      "notes": "SAR fixture preserves the VV/VH and moisture-proxy fields expected from the live radar path."
+    },
+    {
+      "key": "dem",
+      "provider": "Copernicus DEM",
+      "dataset": "copernicus_dem_glo30",
+      "mode": "fixture",
+      "dateRange": {
+        "from": "2020-01-01",
+        "to": "2026-05-26"
+      },
+      "resolution": "30m",
+      "notes": "Altitude is derived from lot data in fixture mode and will be replaced by DEM centroid sampling in live mode."
+    },
+    {
+      "key": "era5",
+      "provider": "Copernicus Climate Change Service via Open-Meteo Archive",
+      "dataset": "ERA5 reanalysis",
+      "mode": "fixture",
+      "dateRange": {
+        "from": "2024-06-01",
+        "to": "2026-05-26"
+      },
+      "resolution": "daily aggregate",
+      "notes": "Climate fixture matches the annual rainfall, temperature, and stress fields expected from live ERA5 aggregation."
+    },
+    {
+      "key": "eudr",
+      "provider": "Copernicus/JRC reference baseline",
+      "dataset": "JRC Global Forest Cover 2020",
+      "mode": "fixture",
+      "dateRange": {
+        "from": "2020-12-31",
+        "to": "2026-05-26"
+      },
+      "resolution": null,
+      "notes": "EUDR fixture models the post-December 2020 deforestation gate; live mode must replace it with polygon screening evidence."
+    }
+  ],
+  "dataQuality": {
+    "confidence": "medium",
+    "completeness": 0.82,
+    "scoreCap": {
+      "applied": false,
+      "maxScore": null,
+      "reason": null
+    },
+    "warnings": [
+      "Fixture mode: provider calls are not executed yet.",
+      "Base L2 metadata write is pending."
+    ],
+    "limitations": [
+      "This deterministic demo snapshot is not a final financing decision.",
+      "EUDR status must be re-computed from live land-cover evidence before production use."
+    ]
+  },
   "sentinel2": {
     "currentNdvi": 0.74,
     "twoYearAverageNdvi": 0.71,
@@ -143,7 +222,17 @@
   },
   "eudr": {
     "baseline": "2020-12-31",
+    "riskLevel": "low_risk",
     "post2020DeforestationDetected": false,
+    "requiresManualReview": false,
+    "confidence": "medium",
+    "reasons": [
+      "No fixture signal of post-2020 tree-cover loss inside the lot polygon.",
+      "Lot remains eligible because the EUDR gate is verified in this demo snapshot."
+    ],
+    "limitations": [
+      "Fixture mode does not query the live JRC forest baseline or Sentinel-2 change detection yet."
+    ],
     "evidenceDateRange": {
       "from": "2021-01-01",
       "to": "2026-05-26"

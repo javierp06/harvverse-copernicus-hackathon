@@ -37,6 +37,28 @@ type SnapshotVariable = {
   source: string;
 };
 
+type SnapshotSource = {
+  key: string;
+  provider: string;
+  dataset: string;
+  mode: "fixture" | "live";
+  dateRange: { from: string; to: string };
+  resolution: string | null;
+  notes: string;
+};
+
+type SnapshotDataQuality = {
+  confidence: "low" | "medium" | "high";
+  completeness: number;
+  scoreCap: {
+    applied: boolean;
+    maxScore: number | null;
+    reason: string | null;
+  };
+  warnings: string[];
+  limitations: string[];
+};
+
 type CopernicusSnapshotView = {
   sourceMode: "fixture" | "live";
   riskScore: number;
@@ -44,6 +66,8 @@ type CopernicusSnapshotView = {
   eudrStatus: "verified" | "non_compliant" | "unknown";
   eligibleForInvestment: boolean;
   variables: SnapshotVariable[];
+  sources: SnapshotSource[];
+  dataQuality: SnapshotDataQuality;
   sentinel2: {
     currentNdvi: number;
     twoYearAverageNdvi: number;
@@ -85,6 +109,8 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 function asSnapshot(value: unknown): CopernicusSnapshotView | null {
   const record = asRecord(value);
   if (!record) return null;
+  const dataQualityRecord = asRecord(record.dataQuality);
+  const scoreCapRecord = asRecord(dataQualityRecord?.scoreCap);
 
   return {
     sourceMode: record.sourceMode === "live" ? "live" : "fixture",
@@ -98,6 +124,25 @@ function asSnapshot(value: unknown): CopernicusSnapshotView | null {
     variables: Array.isArray(record.variables)
       ? (record.variables as SnapshotVariable[])
       : [],
+    sources: Array.isArray(record.sources) ? (record.sources as SnapshotSource[]) : [],
+    dataQuality: {
+      confidence:
+        dataQualityRecord?.confidence === "high" || dataQualityRecord?.confidence === "low"
+          ? dataQualityRecord.confidence
+          : "medium",
+      completeness: numberValue(dataQualityRecord?.completeness, 0),
+      scoreCap: {
+        applied: Boolean(scoreCapRecord?.applied),
+        maxScore: scoreCapRecord?.maxScore == null ? null : numberValue(scoreCapRecord.maxScore),
+        reason: scoreCapRecord?.reason == null ? null : String(scoreCapRecord.reason),
+      },
+      warnings: Array.isArray(dataQualityRecord?.warnings)
+        ? dataQualityRecord.warnings.map(String)
+        : [],
+      limitations: Array.isArray(dataQualityRecord?.limitations)
+        ? dataQualityRecord.limitations.map(String)
+        : [],
+    },
     sentinel2: (asRecord(record.sentinel2) ?? {}) as CopernicusSnapshotView["sentinel2"],
     sentinel1: (asRecord(record.sentinel1) ?? {}) as CopernicusSnapshotView["sentinel1"],
     dem: (asRecord(record.dem) ?? {}) as CopernicusSnapshotView["dem"],
@@ -286,12 +331,39 @@ export default function PublicLotProofPage() {
                 <ProofRow label="Score hash" value={shortHash(snapshot.scoreHash)} mono />
                 <ProofRow label="Chain" value={`Base Sepolia · ${snapshot.chain.chainId}`} />
                 <ProofRow label="Metadata" value={snapshot.chain.metadataStatus} />
+                <ProofRow label="Confidence" value={snapshot.dataQuality.confidence} />
+                <ProofRow label="Completeness" value={`${Math.round(snapshot.dataQuality.completeness * 100)}%`} />
+                <ProofRow
+                  label="Score cap"
+                  value={
+                    snapshot.dataQuality.scoreCap.applied
+                      ? `Max ${snapshot.dataQuality.scoreCap.maxScore}`
+                      : "Not applied"
+                  }
+                />
                 <ProofRow
                   label="Transaction"
                   value={snapshot.chain.transactionHash ? shortHash(snapshot.chain.transactionHash) : "Pending"}
                   mono={Boolean(snapshot.chain.transactionHash)}
                 />
               </div>
+              {snapshot.sources.length > 0 ? (
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {snapshot.sources.map((source) => (
+                    <Badge
+                      key={`${source.key}-${source.dataset}`}
+                      className="rounded-full border-white/10 bg-white/[0.04] text-white/70"
+                    >
+                      {source.dataset}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+              {snapshot.dataQuality.warnings.length > 0 ? (
+                <p className="mt-4 text-xs leading-5 text-yellow-200/75">
+                  {snapshot.dataQuality.warnings[0]}
+                </p>
+              ) : null}
             </GlassCard>
           </div>
         </section>

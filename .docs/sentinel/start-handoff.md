@@ -18,7 +18,7 @@ The real backend should keep the same field names while Javier replaces fixture 
 
 Already enough for parallel work:
 
-- Snapshot shape with score, EUDR, seven variables, YieldPredict, hash, and chain fields.
+- Snapshot shape with score, EUDR, seven variables, YieldPredict, source provenance, data quality, hash, and chain fields.
 - Fixture payload for one realistic Honduran coffee lot.
 - Backend direction: `sourceMode` can be `fixture` first and `live` later.
 - Public QR route and webhook contract for frontend/n8n handoff.
@@ -43,6 +43,7 @@ Priority screens:
    - YieldPredict projected quintales and low/high band.
    - Risk Score with seven-variable breakdown.
    - EUDR status and marketplace eligibility.
+   - Data quality confidence, completeness, and source datasets.
    - Evidence hash and Base L2 proof state.
 
 Important UI rule:

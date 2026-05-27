@@ -353,6 +353,8 @@ export const copernicusSnapshots = pgTable(
 		eudrStatus: eudrStatusEnum("eudr_status").notNull(),
 		eligibleForInvestment: boolean("eligible_for_investment").notNull(),
 		variables: jsonb("variables").notNull(),
+		sources: jsonb("sources").notNull(),
+		dataQuality: jsonb("data_quality").notNull(),
 		polygon: jsonb("polygon"),
 		sentinel2: jsonb("sentinel2").notNull(),
 		sentinel1: jsonb("sentinel1").notNull(),

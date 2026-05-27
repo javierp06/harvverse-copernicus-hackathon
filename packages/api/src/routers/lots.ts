@@ -331,6 +331,8 @@ export const lotsRouter = router({
             eudrStatus: snapshot.eudrStatus,
             eligibleForInvestment: snapshot.eligibleForInvestment,
             variables: snapshot.variables,
+            sources: snapshot.sources,
+            dataQuality: snapshot.dataQuality,
             polygon: snapshot.polygon,
             sentinel2: snapshot.sentinel2,
             sentinel1: snapshot.sentinel1,
