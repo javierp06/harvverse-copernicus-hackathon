@@ -10,6 +10,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
+    "verify:sentinel1": "node --import tsx scripts/verify-sentinel-1-live.ts",
     "verify:sentinel2": "node --import tsx scripts/verify-sentinel-2-live.ts",
     "dev:web": "turbo run dev --filter=web",
     "db:push": "turbo run db:push --filter=@harvverse-copernicus-hackathon/db",
