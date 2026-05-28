@@ -1,0 +1,50 @@
+{
+  "event": "eudr.non_compliant",
+  "eventId": "sentinel-demo-testlot-eudr-001",
+  "occurredAt": "2026-05-28T18:05:00.000Z",
+  "locale": "es",
+  "lotId": 102,
+  "lotCode": "blockedlot",
+  "publicUrl": "http://localhost:3001/lot/blockedlot",
+  "recipient": {
+    "type": "team",
+    "phone": "+50400000000",
+    "name": "Harvverse Team",
+    "whatsappOptIn": true
+  },
+  "lot": {
+    "id": 102,
+    "code": "blockedlot",
+    "farmName": "Finca Revision",
+    "region": "Santa Barbara",
+    "country": "Honduras",
+    "altitudeMasl": 1450,
+    "areaManzanas": 2.1
+  },
+  "copernicus": {
+    "sourceMode": "live",
+    "riskScore": 65,
+    "riskTier": "good",
+    "eudrStatus": "non_compliant",
+    "eligibleForInvestment": false,
+    "scoreHash": "0xfakeblockedhash"
+  },
+  "yieldPredict": {
+    "projectedQuintales": 31.5,
+    "lowBandQuintales": 25.2,
+    "highBandQuintales": 37.8,
+    "ndviModifier": 0.91,
+    "densityModifier": 1
+  },
+  "proof": {
+    "chainId": 31337,
+    "chainLabel": "Hardhat local",
+    "metadataStatus": "pending",
+    "transactionHash": null
+  },
+  "message": {
+    "templateKey": "eudr_non_compliant_es",
+    "title": "Lote bloqueado por EUDR",
+    "body": "El lote blockedlot queda bloqueado: el gate EUDR detecto senal post-2020. Requiere revision antes de marketplace."
+  }
+}

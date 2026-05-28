@@ -1,0 +1,50 @@
+{
+  "event": "local_proof.verified",
+  "eventId": "sentinel-demo-testlot-proof-001",
+  "occurredAt": "2026-05-28T18:10:00.000Z",
+  "locale": "es",
+  "lotId": 101,
+  "lotCode": "testlot",
+  "publicUrl": "http://localhost:3001/lot/testlot",
+  "recipient": {
+    "type": "partner",
+    "phone": "+50400000000",
+    "name": "Demo Partner",
+    "whatsappOptIn": true
+  },
+  "lot": {
+    "id": 101,
+    "code": "testlot",
+    "farmName": "Finca Test 2",
+    "region": "Intibuca",
+    "country": "Honduras",
+    "altitudeMasl": 2229,
+    "areaManzanas": 8.24
+  },
+  "copernicus": {
+    "sourceMode": "live",
+    "riskScore": 77,
+    "riskTier": "good",
+    "eudrStatus": "verified",
+    "eligibleForInvestment": true,
+    "scoreHash": "a0275b8ce7f2a2c2c4e4f8ac8c6d04f5d0d91577c4b1ec9fa67e4b4d1d916ac6"
+  },
+  "yieldPredict": {
+    "projectedQuintales": 152,
+    "lowBandQuintales": 121.6,
+    "highBandQuintales": 182.4,
+    "ndviModifier": 1.16,
+    "densityModifier": 1.06
+  },
+  "proof": {
+    "chainId": 31337,
+    "chainLabel": "Hardhat local",
+    "metadataStatus": "written",
+    "transactionHash": "0x18f1f5ab00000000000000000000000000000000000000000000000068404382"
+  },
+  "message": {
+    "templateKey": "local_proof_verified_es",
+    "title": "Prueba blockchain lista",
+    "body": "El lote testlot ya tiene prueba local verificada en Hardhat. Score hash a0275b8ce7...1d916ac6. Ver QR: http://localhost:3001/lot/testlot"
+  }
+}

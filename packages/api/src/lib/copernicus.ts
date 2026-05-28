@@ -151,6 +151,7 @@ export interface CopernicusLotSnapshot {
     confidence: "medium" | "high";
     investmentArgument: string;
     baseYieldQqPerManzana: number;
+    varietyKey: string;
     altitudeBand: "low" | "optimal" | "high" | "very_high" | "extreme";
     ndviMaySepAuc: number | null;
     ndviBenchmarkAuc: number;
@@ -551,6 +552,7 @@ function buildYieldPredict({
       `(${varietyKey}/${altitudeBand}) × NDVI May-Sep ${ndviModifier.toFixed(2)}x ` +
       `× density ${densityModifier.toFixed(2)}x to estimate the next harvest.`,
     baseYieldQqPerManzana,
+    varietyKey,
     altitudeBand,
     ndviMaySepAuc: season?.auc ?? null,
     ndviBenchmarkAuc,

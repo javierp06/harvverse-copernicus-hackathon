@@ -1,53 +1,140 @@
+import { env } from "@harvverse-copernicus-hackathon/env/server";
 import { z } from "zod";
 
+const eventTypeSchema = z.enum([
+  "copernicus.snapshot.created",
+  "risk_score.ready",
+  "eudr.non_compliant",
+  "local_proof.verified",
+  "yield_predict.ready",
+  "score.calculated",
+  "eudr.blocked",
+  "ndvi.drop_detected",
+  "water_stress_detected",
+  "partner.snapshot_ready",
+]);
+
 const sentinelEventSchema = z.object({
-  event: z.enum([
-    "score.calculated",
-    "eudr.blocked",
-    "ndvi.drop_detected",
-    "water_stress_detected",
-    "partner.snapshot_ready",
-  ]),
+  event: eventTypeSchema,
+  eventId: z.string().min(1).optional(),
+  occurredAt: z.string().datetime().optional(),
   lotId: z.number().int().positive().optional(),
   lotCode: z.string().min(1).optional(),
-  snapshot: z.unknown().optional(),
+  publicUrl: z.string().url().optional(),
+  locale: z.enum(["es", "en"]).default("es").optional(),
   recipient: z
     .object({
       type: z.enum(["farmer", "partner", "team"]).default("team"),
       phone: z.string().min(6).optional(),
       name: z.string().optional(),
+      whatsappOptIn: z.boolean().optional(),
     })
     .optional(),
+  lot: z
+    .object({
+      id: z.number().int().positive().optional(),
+      code: z.string().min(1).optional(),
+      farmName: z.string().optional(),
+      region: z.string().optional(),
+      country: z.string().optional(),
+      altitudeMasl: z.number().int().nullable().optional(),
+      areaManzanas: z.number().nullable().optional(),
+    })
+    .optional(),
+  copernicus: z
+    .object({
+      sourceMode: z.enum(["fixture", "live"]).optional(),
+      riskScore: z.number().min(0).max(100).optional(),
+      riskTier: z.string().optional(),
+      eudrStatus: z.enum(["verified", "non_compliant", "unknown"]).optional(),
+      eligibleForInvestment: z.boolean().optional(),
+      scoreHash: z.string().optional(),
+    })
+    .optional(),
+  yieldPredict: z
+    .object({
+      projectedQuintales: z.number().optional(),
+      lowBandQuintales: z.number().optional(),
+      highBandQuintales: z.number().optional(),
+      ndviModifier: z.number().optional(),
+      densityModifier: z.number().optional(),
+    })
+    .optional(),
+  proof: z
+    .object({
+      chainId: z.number().int().optional(),
+      chainLabel: z.string().optional(),
+      metadataStatus: z.enum(["pending", "written"]).optional(),
+      transactionHash: z.string().nullable().optional(),
+    })
+    .optional(),
+  message: z
+    .object({
+      templateKey: z.string().min(1).optional(),
+      title: z.string().optional(),
+      body: z.string().optional(),
+    })
+    .optional(),
+  snapshot: z.unknown().optional(),
 });
 
-const eventDescriptions = {
-  "score.calculated": "Copernicus score was calculated and is ready to display.",
-  "eudr.blocked": "EUDR gate blocked a lot because post-2020 deforestation was detected.",
+const eventDescriptions: Record<z.infer<typeof eventTypeSchema>, string> = {
+  "copernicus.snapshot.created": "A Copernicus snapshot was created for a lot.",
+  "risk_score.ready": "Risk score and eligibility are ready for WhatsApp.",
+  "eudr.non_compliant": "EUDR gate blocked a lot due to post-2020 vegetation-loss evidence.",
+  "local_proof.verified": "Local Hardhat proof was generated and verified.",
+  "yield_predict.ready": "YieldPredict projection is ready.",
+  "score.calculated": "Legacy alias: Copernicus score was calculated.",
+  "eudr.blocked": "Legacy alias: EUDR gate blocked a lot.",
   "ndvi.drop_detected": "Sentinel-2 NDVI dropped below the configured threshold.",
   "water_stress_detected": "ERA5 rainfall or temperature indicates water stress.",
-  "partner.snapshot_ready": "A partner-facing Copernicus proof packet is ready.",
-} as const;
+  "partner.snapshot_ready": "Legacy alias: partner-facing Copernicus proof packet is ready.",
+};
+
+function normalizeEvent(input: z.infer<typeof sentinelEventSchema>) {
+  const occurredAt = input.occurredAt ?? new Date().toISOString();
+  const lotCode = input.lotCode ?? input.lot?.code ?? null;
+
+  return {
+    event: input.event,
+    eventId:
+      input.eventId ??
+      `sentinel-${input.event}-${lotCode ?? input.lotId ?? "lot"}-${Date.now()}`,
+    occurredAt,
+    locale: input.locale ?? "es",
+    lotId: input.lotId ?? input.lot?.id ?? null,
+    lotCode,
+    publicUrl: input.publicUrl ?? null,
+    recipient: input.recipient ?? {
+      type: "team" as const,
+      phone: null,
+      name: "Harvverse Team",
+      whatsappOptIn: true,
+    },
+    lot: input.lot ?? null,
+    copernicus: input.copernicus ?? null,
+    yieldPredict: input.yieldPredict ?? null,
+    proof: input.proof ?? null,
+    message: input.message ?? null,
+    snapshot: input.snapshot ?? null,
+  };
+}
 
 export async function GET() {
   return Response.json({
     endpoint: "/api/sentinel/alerts",
-    purpose: "Development webhook contract for n8n and WhatsApp Copernicus alerts.",
-    events: eventDescriptions,
-    example: {
-      event: "score.calculated",
-      lotId: 101,
-      lotCode: "HV-HN-ZAF-L02",
-      recipient: {
-        type: "farmer",
-        phone: "+50400000000",
-        name: "Demo Farmer",
-      },
-      snapshot: {
-        riskScore: 85,
-        eudrStatus: "verified",
-        eligibleForInvestment: true,
-      },
+    purpose:
+      "Development webhook contract and optional relay for Sheyla/n8n WhatsApp Copernicus alerts.",
+    forwarding: {
+      enabled: Boolean(env.N8N_WEBHOOK_URL),
+      env: "N8N_WEBHOOK_URL",
     },
+    events: eventDescriptions,
+    fixtures: [
+      "fixtures/n8n/copernicus-snapshot-created.json",
+      "fixtures/n8n/eudr-non-compliant.json",
+      "fixtures/n8n/local-proof-verified.json",
+    ],
   });
 }
 
@@ -66,16 +153,41 @@ export async function POST(request: Request) {
     );
   }
 
-  const receivedAt = new Date().toISOString();
+  const event = normalizeEvent(parsed.data);
+  const relay =
+    env.N8N_WEBHOOK_URL == null
+      ? {
+          enabled: false,
+          delivered: false,
+          status: null,
+          error: null,
+        }
+      : await fetch(env.N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(event),
+        })
+          .then(async (response) => ({
+            enabled: true,
+            delivered: response.ok,
+            status: response.status,
+            error: response.ok ? null : await response.text(),
+          }))
+          .catch((error: unknown) => ({
+            enabled: true,
+            delivered: false,
+            status: null,
+            error:
+              error instanceof Error
+                ? error.message
+                : "n8n webhook delivery failed.",
+          }));
 
   return Response.json({
-    ok: true,
-    receivedAt,
-    event: parsed.data.event,
-    description: eventDescriptions[parsed.data.event],
-    lotId: parsed.data.lotId ?? null,
-    lotCode: parsed.data.lotCode ?? null,
-    recipient: parsed.data.recipient ?? null,
-    snapshot: parsed.data.snapshot ?? null,
+    ok: relay.enabled ? relay.delivered : true,
+    receivedAt: new Date().toISOString(),
+    description: eventDescriptions[event.event],
+    relay,
+    event,
   });
 }

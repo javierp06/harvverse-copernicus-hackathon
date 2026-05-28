@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { Polygon } from "geojson";
 import type { ComponentType } from "react";
+import { useTranslations } from "next-intl";
 import {
   BadgeCheck,
   Ban,
@@ -108,8 +109,9 @@ type CopernicusSnapshotView = {
     highBandQuintales: number;
     confidence: string;
     investmentArgument: string;
-    baseYieldQqPerManzana?: number;
-    altitudeBand?: string;
+    baseYieldQqPerManzana: number;
+    varietyKey: string;
+    altitudeBand: string;
     ndviMaySepAuc?: number | null;
     ndviBenchmarkAuc?: number;
     ndviModifier?: number;
@@ -132,6 +134,7 @@ function asSnapshot(value: unknown): CopernicusSnapshotView | null {
   if (!record) return null;
   const dataQualityRecord = asRecord(record.dataQuality);
   const scoreCapRecord = asRecord(dataQualityRecord?.scoreCap);
+  const yieldRecord = asRecord(record.yieldPredict);
 
   return {
     sourceMode: record.sourceMode === "live" ? "live" : "fixture",
@@ -169,7 +172,10 @@ function asSnapshot(value: unknown): CopernicusSnapshotView | null {
     sentinel1: (asRecord(record.sentinel1) ?? {}) as CopernicusSnapshotView["sentinel1"],
     dem: (asRecord(record.dem) ?? {}) as CopernicusSnapshotView["dem"],
     era5: (asRecord(record.era5) ?? {}) as CopernicusSnapshotView["era5"],
-    yieldPredict: (asRecord(record.yieldPredict) ?? {}) as CopernicusSnapshotView["yieldPredict"],
+    yieldPredict: {
+      ...(yieldRecord as any),
+      varietyKey: String(yieldRecord?.varietyKey ?? "default"),
+    },
     scoreHash: String(record.scoreHash ?? ""),
     chain: (asRecord(record.chain) ?? { chainId: 31337, metadataStatus: "pending" }) as CopernicusSnapshotView["chain"],
   };
@@ -182,23 +188,18 @@ function scoreTone(score: number) {
   return "text-red-300 border-red-400/30 bg-red-400/10";
 }
 
-function eudrLabel(status: CopernicusSnapshotView["eudrStatus"]) {
-  if (status === "verified") return "EUDR Verified";
-  if (status === "non_compliant") return "EUDR Non-Compliant";
-  return "EUDR Pending Review";
-}
-
 function shortHash(hash: string) {
   return hash.length > 16 ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : hash;
-}
-
-function metadataLabel(status: CopernicusSnapshotView["chain"]["metadataStatus"]) {
-  return status === "written" ? "Local proof verified" : "Pending";
 }
 
 function numberValue(value: unknown, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function metricValue(value: unknown, decimals = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toFixed(decimals) : "--";
 }
 
 function nullableNumber(value: unknown) {
@@ -224,6 +225,8 @@ function parseParcelScale(value: unknown): SnapshotDataQuality["parcelScale"] {
 export default function PublicLotProofPage() {
   const params = useParams<{ code: string }>();
   const code = decodeURIComponent(params.code ?? "");
+  const t = useTranslations("lot_proof");
+  const commonT = useTranslations("common");
 
   const { data, isLoading } = useQuery(
     trpc.lots.publicByCode.queryOptions(
@@ -236,9 +239,26 @@ export default function PublicLotProofPage() {
   const lot = data?.lot;
   const polygon = lot?.polygon as Polygon | null | undefined;
 
+  function eudrLabel(status: CopernicusSnapshotView["eudrStatus"]) {
+    if (status === "verified") return t("eudr_verified");
+    if (status === "non_compliant") return t("eudr_non_compliant");
+    return t("eudr_pending");
+  }
+
+  function metadataLabel(status: CopernicusSnapshotView["chain"]["metadataStatus"]) {
+    return status === "written" ? t("local_proof_verified") : t("local_proof_pending");
+  }
+
+  function confidenceLabel(conf: string) {
+    if (conf === "low") return t("low");
+    if (conf === "medium") return t("medium");
+    if (conf === "high") return t("high");
+    return conf;
+  }
+
   if (isLoading) {
     return (
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-28 md:px-6">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-12 md:px-6">
         <Skeleton className="h-12 w-72" />
         <Skeleton className="h-[420px] w-full rounded-2xl" />
       </main>
@@ -247,33 +267,33 @@ export default function PublicLotProofPage() {
 
   if (!lot) {
     return (
-      <main className="mx-auto flex min-h-[70vh] w-full max-w-3xl items-center px-4 py-28 md:px-6">
+      <main className="mx-auto flex min-h-[70vh] w-full max-w-3xl items-center px-4 py-12 md:px-6">
         <GlassCard className="w-full p-8 text-center">
-          <p className="text-sm uppercase tracking-[0.3em] text-primary">Lot proof</p>
-          <h1 className="mt-3 text-3xl font-black text-white">Lot not found</h1>
-          <p className="mt-3 text-white/60">This QR code does not match an available Harvverse Sentinel lot.</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-primary">{commonT("lot")}</p>
+          <h1 className="mt-3 text-3xl font-black text-white">{t("not_found_title")}</h1>
+          <p className="mt-3 text-white/60">{t("not_found_desc")}</p>
         </GlassCard>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-24 md:px-6">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6">
       <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
         <GlassCard className="overflow-hidden border-primary/20">
           <div className="flex min-h-[420px] flex-col">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-primary">Copernicus QR Proof</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-primary">{t("title")}</p>
                 <h1 className="mt-2 text-3xl font-black leading-tight text-white md:text-5xl">
-                  {lot.code ?? `Lot ${lot.id}`}
+                  {lot.code ?? t("lot_id", { id: lot.id })}
                 </h1>
                 <p className="mt-2 text-sm text-white/60">
                   {lot.farmName} · {lot.region}, {lot.country}
                 </p>
               </div>
               <Badge className="rounded-full border-primary/30 bg-primary/10 px-3 py-1 text-primary">
-                {snapshot?.sourceMode ?? "pending"}
+                {snapshot ? t(`source_mode.${snapshot.sourceMode}` as any) : t("source_mode_pending")}
               </Badge>
             </div>
             <div className="relative min-h-[320px] flex-1 bg-white/5">
@@ -281,7 +301,7 @@ export default function PublicLotProofPage() {
                 <PolygonDisplayMap polygon={polygon} color="#67E8F9" fillOpacity={0.22} />
               ) : (
                 <div className="flex h-full min-h-[320px] items-center justify-center text-white/30">
-                  Polygon pending
+                  {t("polygon_pending")}
                 </div>
               )}
             </div>
@@ -292,44 +312,44 @@ export default function PublicLotProofPage() {
           <GlassCard className="border-primary/20 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">Risk Score</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">{t("risk_score")}</p>
                 <div className="mt-3 flex items-end gap-2">
                   <span className="text-6xl font-black text-white">{snapshot?.riskScore ?? "--"}</span>
                   <span className="pb-2 text-xl font-bold text-white/40">/100</span>
                 </div>
               </div>
               <div className={`rounded-full border px-3 py-1 text-xs font-bold uppercase ${scoreTone(snapshot?.riskScore ?? 0)}`}>
-                {snapshot?.riskTier ?? "No score"}
+                {snapshot ? t(`risk_tier.${snapshot.riskTier}` as any) : t("no_score")}
               </div>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <StatusPill
                 icon={snapshot?.eudrStatus === "non_compliant" ? Ban : ShieldCheck}
-                label={snapshot ? eudrLabel(snapshot.eudrStatus) : "EUDR Pending"}
-                value={snapshot?.eligibleForInvestment ? "Eligible" : "Blocked or pending"}
+                label={snapshot ? eudrLabel(snapshot.eudrStatus) : t("eudr_pending")}
+                value={snapshot?.eligibleForInvestment ? t("eligible") : t("blocked_or_pending")}
               />
               <StatusPill
                 icon={TrendingUp}
-                label="YieldPredict"
+                label={t("yield_predict")}
                 value={
                   snapshot
-                    ? `${snapshot.yieldPredict.lowBandQuintales}-${snapshot.yieldPredict.highBandQuintales} qq`
-                    : "Pending"
+                    ? `${snapshot.yieldPredict.lowBandQuintales}-${snapshot.yieldPredict.highBandQuintales} ${t("unit_qq")}`
+                    : t("pending")
                 }
               />
             </div>
           </GlassCard>
 
           <GlassCard className="border-white/10 p-6">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">Satellite Signals</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">{t("satellite_signals")}</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Metric icon={Leaf} label="Sentinel-2 NDVI" value={snapshot ? numberValue(snapshot.sentinel2.currentNdvi).toFixed(2) : "--"} />
-              <Metric icon={Leaf} label="Sentinel-2 NDRE" value={snapshot?.sentinel2.currentNdre == null ? "--" : numberValue(snapshot.sentinel2.currentNdre).toFixed(2)} />
-              <Metric icon={Sprout} label="Sentinel-2 NDWI" value={snapshot?.sentinel2.currentNdwi == null ? "--" : numberValue(snapshot.sentinel2.currentNdwi).toFixed(2)} />
-              <Metric icon={Satellite} label="Sentinel-1 SAR" value={snapshot?.sentinel1.moistureProxy ?? "--"} />
-              <Metric icon={Satellite} label="S1 VH/VV · RVI" value={snapshot?.sentinel1.vhVvRatio == null || snapshot.sentinel1.radarVegetationIndex == null ? "--" : `${numberValue(snapshot.sentinel1.vhVvRatio).toFixed(2)} · ${numberValue(snapshot.sentinel1.radarVegetationIndex).toFixed(2)}`} />
-              <Metric icon={Sprout} label="ERA5 Rainfall" value={snapshot ? `${numberValue(snapshot.era5.annualRainfallMm)} mm` : "--"} />
-              <Metric icon={ChartNoAxesColumn} label="DEM Altitude" value={snapshot ? `${numberValue(snapshot.dem.altitudeMasl)} masl` : "--"} />
+              <Metric icon={Leaf} label={t("metrics.s2_ndvi" as any)} value={snapshot ? numberValue(snapshot.sentinel2.currentNdvi).toFixed(2) : "--"} />
+              <Metric icon={Leaf} label={t("metrics.s2_ndre" as any)} value={snapshot?.sentinel2.currentNdre == null ? "--" : numberValue(snapshot.sentinel2.currentNdre).toFixed(2)} />
+              <Metric icon={Sprout} label={t("metrics.s2_ndwi" as any)} value={snapshot?.sentinel2.currentNdwi == null ? "--" : numberValue(snapshot.sentinel2.currentNdwi).toFixed(2)} />
+              <Metric icon={Satellite} label={t("metrics.s1_sar" as any)} value={snapshot?.sentinel1.moistureProxy ?? "--"} />
+              <Metric icon={Satellite} label={t("metrics.s1_vh_vv_rvi" as any)} value={snapshot?.sentinel1.vhVvRatio == null || snapshot.sentinel1.radarVegetationIndex == null ? "--" : `${numberValue(snapshot.sentinel1.vhVvRatio).toFixed(2)} · ${numberValue(snapshot.sentinel1.radarVegetationIndex).toFixed(2)}`} />
+              <Metric icon={Sprout} label={t("metrics.era5_rainfall" as any)} value={snapshot ? `${numberValue(snapshot.era5.annualRainfallMm)} ${t("unit_mm")}` : "--"} />
+              <Metric icon={ChartNoAxesColumn} label={t("metrics.dem_altitude" as any)} value={snapshot ? `${numberValue(snapshot.dem.altitudeMasl)} ${t("unit_masl")}` : "--"} />
             </div>
           </GlassCard>
         </div>
@@ -340,15 +360,17 @@ export default function PublicLotProofPage() {
           <GlassCard className="border-white/10 p-6">
             <div className="flex items-center gap-2">
               <BadgeCheck className="size-5 text-primary" />
-              <h2 className="text-xl font-black text-white">Seven-Variable Breakdown</h2>
+              <h2 className="text-xl font-black text-white">{t("breakdown_title")}</h2>
             </div>
             <div className="mt-5 space-y-3">
               {snapshot.variables.map((variable) => (
                 <div key={variable.key} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-bold text-white">{variable.label}</p>
-                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/35">{variable.source}</p>
+                      <p className="font-bold text-white">{t(`variables.${variable.key}` as any)}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/35">
+                        {t(`variable_sources.${variable.source.toLowerCase()}` as any)}
+                      </p>
                     </div>
                     <p className="text-lg font-black text-primary">{variable.score}</p>
                   </div>
@@ -362,50 +384,59 @@ export default function PublicLotProofPage() {
 
           <div className="grid gap-6">
             <GlassCard className="border-white/10 p-6">
-              <h2 className="text-xl font-black text-white">Investment Argument</h2>
-              <p className="mt-3 text-sm leading-6 text-white/65">{snapshot.yieldPredict.investmentArgument}</p>
+              <h2 className="text-xl font-black text-white">{t("investment_argument")}</h2>
+              <p className="mt-3 text-sm leading-6 text-white/65">
+                {t("investment_argument_template", {
+                  area: metricValue(snapshot.dem.areaManzanas, 2),
+                  baseYield: snapshot.yieldPredict.baseYieldQqPerManzana.toFixed(1),
+                  variety: t(`varieties.${snapshot.yieldPredict.varietyKey}` as any),
+                  band: t(`altitude_bands.${snapshot.yieldPredict.altitudeBand}` as any),
+                  ndvi: snapshot.yieldPredict.ndviModifier?.toFixed(2) ?? "1.00",
+                  density: snapshot.yieldPredict.densityModifier?.toFixed(2) ?? "1.00",
+                })}
+              </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <Metric label="Projected" value={`${snapshot.yieldPredict.projectedQuintales} qq`} />
-                <Metric label="Low band" value={`${snapshot.yieldPredict.lowBandQuintales} qq`} />
-                <Metric label="High band" value={`${snapshot.yieldPredict.highBandQuintales} qq`} />
+                <Metric label={t("projected")} value={`${snapshot.yieldPredict.projectedQuintales} ${t("unit_qq")}`} />
+                <Metric label={t("low_band")} value={`${snapshot.yieldPredict.lowBandQuintales} ${t("unit_qq")}`} />
+                <Metric label={t("high_band")} value={`${snapshot.yieldPredict.highBandQuintales} ${t("unit_qq")}`} />
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {snapshot.yieldPredict.baseYieldQqPerManzana != null ? (
                   <Metric
-                    label="Base yield"
-                    value={`${snapshot.yieldPredict.baseYieldQqPerManzana} qq/mz`}
+                    label={t("base_yield")}
+                    value={`${snapshot.yieldPredict.baseYieldQqPerManzana} ${t("unit_qq_mz")}`}
                   />
                 ) : null}
                 {snapshot.yieldPredict.ndviModifier != null ? (
                   <Metric
-                    label="NDVI modifier"
-                    value={`${snapshot.yieldPredict.ndviModifier}x`}
+                    label={t("ndvi_modifier")}
+                    value={`${snapshot.yieldPredict.ndviModifier}${t("unit_x")}`}
                   />
                 ) : null}
                 {snapshot.yieldPredict.densityModifier != null ? (
                   <Metric
-                    label="Density modifier"
-                    value={`${snapshot.yieldPredict.densityModifier}x`}
+                    label={t("density_modifier")}
+                    value={`${snapshot.yieldPredict.densityModifier}${t("unit_x")}`}
                   />
                 ) : null}
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {snapshot.yieldPredict.ndviMaySepAuc != null ? (
                   <Metric
-                    label="May-Sep NDVI AUC"
+                    label={t("ndvi_auc")}
                     value={`${snapshot.yieldPredict.ndviMaySepAuc}`}
                   />
                 ) : null}
                 {snapshot.yieldPredict.floweringPeakNdvi != null ? (
                   <Metric
-                    label="Flowering peak NDVI"
+                    label={t("flowering_peak")}
                     value={`${snapshot.yieldPredict.floweringPeakNdvi}`}
                   />
                 ) : null}
                 {snapshot.yieldPredict.plantsPerManzana != null ? (
                   <Metric
-                    label="Plant density"
-                    value={`${snapshot.yieldPredict.plantsPerManzana}/mz`}
+                    label={t("plant_density")}
+                    value={`${snapshot.yieldPredict.plantsPerManzana}${t("unit_per_mz")}`}
                   />
                 ) : null}
               </div>
@@ -414,42 +445,42 @@ export default function PublicLotProofPage() {
             <GlassCard className="border-white/10 p-6">
               <div className="flex items-center gap-2">
                 <Fingerprint className="size-5 text-primary" />
-                <h2 className="text-xl font-black text-white">Evidence Packet</h2>
+                <h2 className="text-xl font-black text-white">{t("evidence_packet")}</h2>
               </div>
               <div className="mt-4 space-y-3 text-sm">
-                <ProofRow label="Score hash" value={shortHash(snapshot.scoreHash)} mono />
-                <ProofRow label="Chain" value={`${chainLabel(snapshot.chain.chainId)} · ${snapshot.chain.chainId}`} />
-                <ProofRow label="Local proof" value={metadataLabel(snapshot.chain.metadataStatus)} />
-                <ProofRow label="Confidence" value={snapshot.dataQuality.confidence} />
-                <ProofRow label="Completeness" value={`${Math.round(snapshot.dataQuality.completeness * 100)}%`} />
-                <ProofRow label="Parcel confidence" value={snapshot.dataQuality.parcelScale.confidence} />
+                <ProofRow label={t("score_hash")} value={shortHash(snapshot.scoreHash)} mono />
+                <ProofRow label={t("chain")} value={`${chainLabel(snapshot.chain.chainId)} · ${snapshot.chain.chainId}`} />
+                <ProofRow label={t("local_proof")} value={metadataLabel(snapshot.chain.metadataStatus)} />
+                <ProofRow label={t("confidence")} value={confidenceLabel(snapshot.dataQuality.confidence)} />
+                <ProofRow label={t("completeness")} value={`${Math.round(snapshot.dataQuality.completeness * 100)}%`} />
+                <ProofRow label={t("parcel_confidence")} value={confidenceLabel(snapshot.dataQuality.parcelScale.confidence)} />
                 <ProofRow
-                  label="S2 pixels"
+                  label={t("s2_pixels")}
                   value={
                     snapshot.dataQuality.parcelScale.sentinel2PixelEstimate == null
-                      ? "Unknown"
+                      ? t("unknown")
                       : `~${snapshot.dataQuality.parcelScale.sentinel2PixelEstimate}`
                   }
                 />
                 <ProofRow
-                  label="S1 IW cells"
+                  label={t("s1_cells")}
                   value={
                     snapshot.dataQuality.parcelScale.sentinel1IwCellEstimate == null
-                      ? "Unknown"
+                      ? t("unknown")
                       : `~${snapshot.dataQuality.parcelScale.sentinel1IwCellEstimate}`
                   }
                 />
                 <ProofRow
-                  label="Score cap"
+                  label={t("score_cap")}
                   value={
                     snapshot.dataQuality.scoreCap.applied
-                      ? `Max ${snapshot.dataQuality.scoreCap.maxScore}`
-                      : "Not applied"
+                      ? t("max_score", { score: snapshot.dataQuality.scoreCap.maxScore ?? 0 })
+                      : t("not_applied")
                   }
                 />
                 <ProofRow
-                  label="Transaction"
-                  value={snapshot.chain.transactionHash ? shortHash(snapshot.chain.transactionHash) : "Pending"}
+                  label={t("transaction")}
+                  value={snapshot.chain.transactionHash ? shortHash(snapshot.chain.transactionHash) : t("pending")}
                   mono={Boolean(snapshot.chain.transactionHash)}
                 />
               </div>
@@ -480,9 +511,9 @@ export default function PublicLotProofPage() {
         </section>
       ) : (
         <GlassCard className="border-yellow-400/20 p-6">
-          <h2 className="text-xl font-black text-white">Copernicus snapshot pending</h2>
+          <h2 className="text-xl font-black text-white">{t("pending_title")}</h2>
           <p className="mt-2 text-sm text-white/60">
-            This lot exists, but the satellite score has not been calculated yet.
+            {t("pending_desc")}
           </p>
         </GlassCard>
       )}

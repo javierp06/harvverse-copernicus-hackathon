@@ -122,32 +122,12 @@ async function sha256Hex(data: string): Promise<string> {
     .join("");
 }
 
-function formatRelativeDate(value: Date | string | null | undefined) {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  const diffMs = date.getTime() - Date.now();
-  const diffDays = Math.round(diffMs / 86_400_000);
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-  if (Math.abs(diffDays) >= 1) return rtf.format(diffDays, "day");
-  const diffHours = Math.round(diffMs / 3_600_000);
-  if (Math.abs(diffHours) >= 1) return rtf.format(diffHours, "hour");
-  const diffMinutes = Math.round(diffMs / 60_000);
-  return rtf.format(diffMinutes, "minute");
-}
-
 function scoreTone(score: number | null | undefined) {
   if (score == null) return "border-white/10 bg-white/[0.03] text-white/45";
   if (score >= 80) return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
   if (score >= 60) return "border-lime-400/30 bg-lime-400/10 text-lime-300";
   if (score >= 40) return "border-yellow-400/30 bg-yellow-400/10 text-yellow-300";
   return "border-red-400/30 bg-red-400/10 text-red-300";
-}
-
-function eudrLabel(status: string | null | undefined) {
-  if (status === "verified") return "EUDR Verified";
-  if (status === "non_compliant") return "EUDR Non-Compliant";
-  return "EUDR Pending Review";
 }
 
 function shortHash(hash: string | null | undefined) {
@@ -205,6 +185,12 @@ export default function LotDetailPage() {
       },
     }),
   );
+
+  function eudrLabel(status: string | null | undefined) {
+    if (status === "verified") return t("eudr_verified");
+    if (status === "non_compliant") return t("eudr_non_compliant");
+    return t("eudr_pending");
+  }
 
   const reserve = useReservePartnership({
     lot: lot ?? null,
@@ -311,7 +297,7 @@ export default function LotDetailPage() {
       return (
         <Button className="bg-red-500/15 border border-red-500/30 text-red-300 font-bold py-6 px-8 cursor-default" disabled>
           {blockedByEudr ? <Ban className="w-5 h-5 mr-2" /> : <ShieldCheck className="w-5 h-5 mr-2" />}
-          {copernicusSnapshot ? "Satellite score not eligible" : "Satellite score pending"}
+          {copernicusSnapshot ? t("satellite_pending_title") : t("satellite_pending_title")}
         </Button>
       );
     }
@@ -462,7 +448,7 @@ export default function LotDetailPage() {
                 <p className="text-lg text-white/70">{lot.farmName}</p>
               </div>
               <Badge className="rounded-full bg-emerald-500/20 text-emerald-400 border-emerald-500/30 uppercase">
-                {lot.status}
+                {t(`status_${lot.status}` as any)}
               </Badge>
             </div>
 
@@ -575,11 +561,11 @@ export default function LotDetailPage() {
                     Copernicus
                   </p>
                   <h2 className="mt-1 font-trenda text-lg font-bold text-white">
-                    Satellite Verification
+                    {t("satellite_verification")}
                   </h2>
                 </div>
                 <Badge className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${scoreTone(copernicusSnapshot?.riskScore)}`}>
-                  {copernicusSnapshot?.sourceMode ?? "pending"}
+                  {copernicusSnapshot?.sourceMode ?? t("pending")}
                 </Badge>
               </div>
 
@@ -587,7 +573,7 @@ export default function LotDetailPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className={`rounded-lg border p-3 ${scoreTone(copernicusSnapshot.riskScore)}`}>
-                      <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Risk Score</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">{t("risk_score")}</p>
                       <p className="mt-1 text-3xl font-black">
                         {copernicusSnapshot.riskScore}
                         <span className="text-sm opacity-60">/100</span>
@@ -595,10 +581,10 @@ export default function LotDetailPage() {
                     </div>
                     <div className={`rounded-lg border p-3 ${copernicusEligible ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-red-400/30 bg-red-400/10 text-red-300"}`}>
                       <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                        Contract Gate
+                        {t("contract_gate")}
                       </p>
                       <p className="mt-2 text-sm font-black">
-                        {copernicusEligible ? "Eligible" : "Blocked"}
+                        {copernicusEligible ? t("eligible") : t("blocked")}
                       </p>
                     </div>
                   </div>
@@ -609,30 +595,30 @@ export default function LotDetailPage() {
                       <span className="font-bold text-white">{eudrLabel(copernicusSnapshot.eudrStatus)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">Version</span>
+                      <span className="text-white/45">{t("version")}</span>
                       <span className="font-mono text-xs text-primary">{copernicusSnapshot.scoreVersion}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
                       <span className="flex items-center gap-1 text-white/45">
                         <Fingerprint className="h-3.5 w-3.5" />
-                        Hash
+                        {t("hash")}
                       </span>
                       <span className="font-mono text-xs text-primary">{shortHash(copernicusSnapshot.scoreHash)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">Local proof</span>
+                      <span className="text-white/45">{t("local_proof")}</span>
                       <span className={localProofWritten ? "font-bold text-emerald-300" : "font-bold text-yellow-200"}>
-                        {localProofWritten ? "Verified" : "Pending"}
+                        {localProofWritten ? t("verified") : t("pending")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">Chain</span>
+                      <span className="text-white/45">{t("chain")}</span>
                       <span className="font-mono text-xs text-primary">
                         {chainLabel(chainProof.chainId)} · {chainProof.chainId}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">Transaction</span>
+                      <span className="text-white/45">{t("transaction")}</span>
                       <span className="font-mono text-xs text-primary">{shortHash(chainProof.transactionHash)}</span>
                     </div>
                   </div>
@@ -650,7 +636,7 @@ export default function LotDetailPage() {
                         ) : (
                           <ShieldCheck className="mr-2 h-4 w-4" />
                         )}
-                        Generate local proof
+                        {t("generate_local_proof")}
                       </Button>
                     ) : null}
                     {lot.code ? (
@@ -661,7 +647,7 @@ export default function LotDetailPage() {
                         onClick={() => router.push(`/lot/${encodeURIComponent(lot.code ?? "")}` as Route)}
                       >
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        QR proof
+                        {t("qr_proof")}
                       </Button>
                     ) : null}
                   </div>
@@ -671,9 +657,9 @@ export default function LotDetailPage() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-yellow-400/20 bg-yellow-400/10 p-4">
-                  <p className="text-sm font-bold text-yellow-200">Satellite score pending</p>
+                  <p className="text-sm font-bold text-yellow-200">{t("satellite_pending_title")}</p>
                   <p className="mt-1 text-xs leading-5 text-yellow-100/65">
-                    The lot must have a Copernicus snapshot before on-chain investment can open.
+                    {t("satellite_pending_desc")}
                   </p>
                 </div>
               )}

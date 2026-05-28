@@ -12,6 +12,7 @@ export const env = createEnv({
     SENTINEL_HUB_CLIENT_SECRET: z.string().min(1).optional(),
     CDS_API_KEY: z.string().min(1).optional(),
     HARVVERSE_LOT_ADDRESS: z.string().min(1).optional(),
+    N8N_WEBHOOK_URL: z.url().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

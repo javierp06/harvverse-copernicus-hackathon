@@ -89,7 +89,7 @@ export default function FarmerDashboardPage() {
         <div>
           <h1 className="font-trenda text-2xl md:text-3xl font-bold text-white">
             {farmsToShow.length > 0
-              ? `Bienvenido de nuevo, ${firstName}.`
+              ? t("welcome_back", { name: firstName })
               : t("welcome", { name: user?.displayName ?? "" })}
           </h1>
           <p className="mt-1 md:mt-2 text-sm md:text-base text-white/70">

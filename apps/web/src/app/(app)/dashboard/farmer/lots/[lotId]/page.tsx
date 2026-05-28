@@ -1,11 +1,24 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Polygon } from "geojson";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Ban, ExternalLink, Fingerprint, HelpCircle, Loader2, MapPin, Mountain, Pencil, Satellite, ShieldCheck, Sprout, TreePine } from "lucide-react";
+import {
+  ArrowLeft,
+  Ban,
+  ExternalLink,
+  Fingerprint,
+  HelpCircle,
+  Loader2,
+  MapPin,
+  Mountain,
+  Satellite,
+  ShieldCheck,
+  TrendingUp,
+} from "lucide-react";
 
 import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
@@ -17,41 +30,14 @@ import {
   TooltipTrigger,
 } from "@harvverse-copernicus-hackathon/ui/components/tooltip";
 
-import { computeEarnings, formatUsd, formatUsdFromCents, formatUsdPrecise } from "@/lib/format";
+import { computeEarnings, formatUsdFromCents, formatUsdPrecise, formatUsd } from "@/lib/format";
 import { asRecord, chainLabel, getSnapshotChain } from "@/lib/chainProof";
-import { useCurrentUser } from "@/hooks/use-auth";
 import { trpc } from "@/utils/trpc";
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-gray-500/20 text-white/70 border-gray-500/30",
-  available: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  reserved: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  active: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  settled: "bg-gray-500/20 text-white/60 border-gray-500/30",
-  cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
-};
-
-function formatRelativeDate(value: Date | string | null | undefined) {
-  if (!value) return null;
-
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const diffSeconds = Math.round((date.getTime() - Date.now()) / 1000);
-  const absSeconds = Math.abs(diffSeconds);
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-
-  if (absSeconds < 60) return rtf.format(diffSeconds, "second");
-  const diffMinutes = Math.round(diffSeconds / 60);
-  if (Math.abs(diffMinutes) < 60) return rtf.format(diffMinutes, "minute");
-  const diffHours = Math.round(diffMinutes / 60);
-  if (Math.abs(diffHours) < 24) return rtf.format(diffHours, "hour");
-  const diffDays = Math.round(diffHours / 24);
-  if (Math.abs(diffDays) < 30) return rtf.format(diffDays, "day");
-  const diffMonths = Math.round(diffDays / 30);
-  if (Math.abs(diffMonths) < 12) return rtf.format(diffMonths, "month");
-  return rtf.format(Math.round(diffMonths / 12), "year");
-}
+const PolygonDisplayMap = dynamic(() => import("@/components/polygon-display-map"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[200px] w-full rounded-lg" />,
+});
 
 function scoreTone(score: number | null | undefined) {
   if (score == null) return "border-white/10 bg-white/[0.03] text-white/45";
@@ -61,50 +47,31 @@ function scoreTone(score: number | null | undefined) {
   return "border-red-400/30 bg-red-400/10 text-red-300";
 }
 
-function eudrLabel(status: string | null | undefined) {
-  if (status === "verified") return "EUDR Verified";
-  if (status === "non_compliant") return "EUDR Non-Compliant";
-  return "EUDR Pending Review";
-}
-
 function shortHash(hash: string | null | undefined) {
   if (!hash) return "Pending";
   return hash.length > 18 ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : hash;
 }
 
-function numberValue(value: unknown): number | null {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function metricValue(value: unknown, digits = 2) {
-  const parsed = numberValue(value);
-  return parsed == null ? "Pending" : parsed.toFixed(digits);
+function metricValue(val: unknown, decimals = 2) {
+  const num = Number(val);
+  return Number.isFinite(num) ? num.toFixed(decimals) : "--";
 }
 
 export default function FarmerLotDetailPage() {
   const router = useRouter();
   const params = useParams<{ lotId: string }>();
   const lotId = Number(params.lotId);
-  const lotIdValid = Number.isFinite(lotId) && lotId > 0;
-  const { data: user, isLoading: userLoading } = useCurrentUser();
-  const queryClient = useQueryClient();
   const t = useTranslations("lot");
-  const tc = useTranslations("common");
   const tLF = useTranslations("lot_financial");
+  const queryClient = useQueryClient();
 
-  const { data: lot, isLoading: lotLoading } = useQuery(
-    trpc.lots.byId.queryOptions({ id: lotId }, { enabled: lotIdValid }),
+  const { data: lot, isLoading } = useQuery(
+    trpc.lots.byId.queryOptions(
+      { id: lotId },
+      { enabled: Number.isFinite(lotId) },
+    ),
   );
-  const markLocalProof = useMutation(
-    trpc.lots.markLocalCopernicusProof.mutationOptions({
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.lots.byId.queryKey({ id: lotId }),
-        });
-      },
-    }),
-  );
+
   const computeCopernicus = useMutation(
     trpc.lots.computeCopernicusSnapshot.mutationOptions({
       onSuccess: async () => {
@@ -114,52 +81,51 @@ export default function FarmerLotDetailPage() {
       },
     }),
   );
-  const autoCopernicusAttemptedRef = useRef(false);
 
-  useEffect(() => {
-    autoCopernicusAttemptedRef.current = false;
-  }, [lotId]);
+  const markLocalProof = useMutation(
+    trpc.lots.markLocalCopernicusProof.mutationOptions({
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: trpc.lots.byId.queryKey({ id: lotId }),
+        });
+      },
+    }),
+  );
 
-  useEffect(() => {
-    if (!lot || lot.copernicusSnapshot || autoCopernicusAttemptedRef.current) return;
-    if (computeCopernicus.isPending) return;
-    if (lot.polygon == null) return;
-
-    autoCopernicusAttemptedRef.current = true;
-    computeCopernicus.mutate({ lotId: lot.id, sourceMode: "live" });
-  }, [lot, computeCopernicus, lotId]);
-
-  if (!userLoading && user && user.role !== "farmer") {
-    router.replace("/dashboard/player");
-    return null;
+  function eudrLabel(status: string | null | undefined) {
+    if (status === "verified") return t("eudr_verified");
+    if (status === "non_compliant") return t("eudr_non_compliant");
+    return t("eudr_pending");
   }
-
-  const isLoading = userLoading || lotLoading;
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-4">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
+      <div className="mx-auto max-w-7xl px-4 md:px-0">
+        <Skeleton className="mb-6 h-10 w-48" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Skeleton className="h-64 lg:col-span-2" />
+          <Skeleton className="h-64" />
+        </div>
       </div>
     );
   }
 
   if (!lot) {
     return (
-      <GlassCard className="p-12 text-center border-primary/20">
-        <p className="text-white/60">{t("not_found")}</p>
-      </GlassCard>
+      <div className="mx-auto max-w-7xl px-4 md:px-0">
+        <GlassCard className="p-12 text-center border-primary/20">
+          <p className="text-white/60">{t("not_found")}</p>
+        </GlassCard>
+      </div>
     );
   }
 
-  const activePlan = lot.plans?.find((p) => p.status === "approved_for_demo") ?? lot.plans?.[0];
-  const statusColor = STATUS_COLORS[lot.status] ?? STATUS_COLORS.available;
+  const activePlan = lot.plans.find((p) => p.status !== "revoked") ?? null;
   const copernicusSnapshot = lot.copernicusSnapshot ?? null;
   const copernicusEligible = copernicusSnapshot?.eligibleForInvestment === true;
   const chainProof = getSnapshotChain(copernicusSnapshot);
   const localProofWritten = chainProof.metadataStatus === "written";
+
   const sentinel2 = asRecord(copernicusSnapshot?.sentinel2) ?? {};
   const sentinel1 = asRecord(copernicusSnapshot?.sentinel1) ?? {};
   const dem = asRecord(copernicusSnapshot?.dem) ?? {};
@@ -169,98 +135,69 @@ export default function FarmerLotDetailPage() {
     <div className="mx-auto max-w-7xl px-4 md:px-0 text-[#EEEEEE]">
       <Button
         variant="ghost"
-        className="mb-6 text-white/70 px-0 md:px-4"
-        onClick={() =>
-          router.push(`/dashboard/farmer/farms/${lot.farmId}` as Route)
-        }
+        className="mb-6 text-white/70 hover:bg-white/5 hover:text-white px-0 md:px-4"
+        onClick={() => router.push(`/dashboard/farmer/farms/${lot.farmId}`)}
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         {t("back_to_farm")}
       </Button>
 
-      <div className="max-w-2xl mx-auto space-y-6">
-        {lot.status === "draft" ? (
-          <GlassCard className="border-amber-500/30 bg-amber-500/10 p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="font-trenda text-base font-bold text-amber-300">
-                {t("draft_banner")}
-              </p>
-              <Button
-                size="sm"
-                className="bg-primary text-[#001020] hover:bg-primary/90 font-bold"
-                onClick={() =>
-                  router.push(`/dashboard/farmer/lots/${lot.id}/edit?section=terms` as Route)
-                }
-              >
-                {t("add_terms_to_publish")}
-              </Button>
-            </div>
-          </GlassCard>
-        ) : null}
+      <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="mb-2 font-trenda text-3xl font-bold text-white">
+            {lot.code ?? t("lot_id", { id: lot.id })}
+          </h1>
+          <p className="flex items-center gap-2 text-white/60">
+            <MapPin className="size-4 text-primary/60" />
+            {lot.farmName} · {lot.region}, {lot.country}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="border-white/10 bg-white/[0.03] text-white hover:bg-white/10"
+            onClick={() => router.push(`/dashboard/farmer/lots/${lot.id}/edit`)}
+          >
+            {t("edit_lot_btn")}
+          </Button>
+        </div>
+      </div>
 
-        <GlassCard className="p-6 md:p-8 border-primary/20">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between mb-8">
-            <div className="min-w-0">
-              <h1 className="font-trenda text-2xl md:text-3xl font-bold text-white mb-1 leading-tight break-words">
-                {lot.code ?? t("lot_id", { id: lot.id })}
-              </h1>
-              <p className="text-white/50 text-sm">{t("farmer_detail_title")}</p>
-            </div>
-            <div className="flex items-center gap-3 self-start">
-              <Badge className={`uppercase px-3 py-1 text-[10px] md:text-xs font-bold tracking-wider ${statusColor}`}>
-                {lot.status}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <GlassCard className="overflow-hidden border-primary/20 lg:col-span-2">
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.02] px-6 py-4">
+              <h2 className="font-trenda text-base font-bold text-white uppercase tracking-wider">
+                {t("lot_boundary")}
+              </h2>
+              <Badge className="rounded-full bg-emerald-500/20 text-emerald-400 border-emerald-500/30 uppercase">
+                {t(`status_${lot.status}` as any)}
               </Badge>
-              <Button
-                size="sm"
-                className="bg-primary hover:bg-primary/90 text-[#001020] font-black uppercase text-[10px] tracking-widest px-4"
-                onClick={() =>
-                  router.push(`/dashboard/farmer/lots/${lot.id}/edit` as Route)
-                }
-              >
-                <Pencil className="w-3.5 h-3.5 mr-2" />
-                {t("edit_lot_btn")}
-              </Button>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-white/5 p-4 rounded-xl border border-white/5">
-            <div className="flex items-center gap-2 text-white/70">
-              <MapPin className="w-4 h-4 shrink-0 text-primary/60" />
-              <span className="truncate">{lot.region}, {lot.country}</span>
+            <div className="h-[320px] bg-black/20">
+              {lot.polygon ? (
+                <PolygonDisplayMap polygon={lot.polygon as Polygon} color="#93D832" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-white/30 italic">
+                  {t("polygon_fallback")}
+                </div>
+              )}
             </div>
-            {lot.altitudeMasl != null && (
-              <div className="flex items-center gap-2 text-white/70">
-                <Mountain className="w-4 h-4 shrink-0 text-primary/60" />
-                <span>{lot.altitudeMasl} MASL</span>
-              </div>
-            )}
-            {lot.variety && (
-              <div className="flex items-center gap-2 text-white/70">
-                <Sprout className="w-4 h-4 shrink-0 text-primary/60" />
-                <span>{lot.variety}</span>
-              </div>
-            )}
-            {lot.numTrees != null && (
-              <div className="flex items-center gap-2 text-white/70">
-                <TreePine className="w-4 h-4 shrink-0 text-primary/60" />
-                <span>{lot.numTrees.toLocaleString()} trees</span>
-              </div>
-            )}
           </div>
         </GlassCard>
 
         <GlassCard className="p-6 md:p-8 border-primary/20">
-          <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="mb-6 flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
                 Copernicus
               </p>
-              <h2 className="mt-1 font-trenda text-base font-bold uppercase tracking-wider text-white">
-                Satellite Verification
+              <h2 className="mt-1 font-trenda text-lg font-bold text-white">
+                {t("satellite_verification")}
               </h2>
             </div>
             <Badge className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${scoreTone(copernicusSnapshot?.riskScore)}`}>
-              {copernicusSnapshot?.sourceMode ?? "pending"}
+              {copernicusSnapshot?.sourceMode ?? t("pending")}
             </Badge>
           </div>
 
@@ -268,9 +205,7 @@ export default function FarmerLotDetailPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className={`rounded-lg border p-3 ${scoreTone(copernicusSnapshot.riskScore)}`}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                    Risk Score
-                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">{t("risk_score")}</p>
                   <p className="mt-1 text-3xl font-black">
                     {copernicusSnapshot.riskScore}
                     <span className="text-sm opacity-60">/100</span>
@@ -278,11 +213,11 @@ export default function FarmerLotDetailPage() {
                 </div>
                 <div className={`rounded-lg border p-3 ${copernicusEligible ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-red-400/30 bg-red-400/10 text-red-300"}`}>
                   <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                    Investment Gate
+                    {t("investment_gate")}
                   </p>
                   <div className="mt-2 flex items-center gap-2 text-sm font-black">
                     {copernicusEligible ? <ShieldCheck className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                    {copernicusEligible ? "Eligible" : "Blocked"}
+                    {copernicusEligible ? t("eligible") : t("blocked")}
                   </div>
                 </div>
               </div>
@@ -293,58 +228,58 @@ export default function FarmerLotDetailPage() {
                   <span className="font-bold text-white">{eudrLabel(copernicusSnapshot.eudrStatus)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <span className="text-white/45">DEM altitude</span>
-                  <span className="font-bold text-white">{metricValue(dem.altitudeMasl, 0)} masl</span>
+                  <span className="text-white/45">{t("dem_altitude")}</span>
+                  <span className="font-bold text-white">{metricValue(dem.altitudeMasl, 0)} {t("unit_masl")}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S2 NDVI</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("s2_ndvi")}</span>
                     <p className="mt-1 font-mono text-sm text-primary">{metricValue(sentinel2.currentNdvi)}</p>
                   </div>
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S2 NDRE</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("s2_ndre")}</span>
                     <p className="mt-1 font-mono text-sm text-primary">{metricValue(sentinel2.currentNdre)}</p>
                   </div>
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S2 NDWI</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("s2_ndwi")}</span>
                     <p className="mt-1 font-mono text-sm text-primary">{metricValue(sentinel2.currentNdwi)}</p>
                   </div>
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S1 VH/VV · RVI</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("s1_vh_vv_rvi")}</span>
                     <p className="mt-1 font-mono text-sm text-primary">
                       {metricValue(sentinel1.vhVvRatio)} · {metricValue(sentinel1.radarVegetationIndex)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <span className="text-white/45">ERA5 rainfall</span>
-                  <span className="font-bold text-white">{metricValue(era5.annualRainfallMm, 0)} mm/year</span>
+                  <span className="text-white/45">{t("era5_rainfall")}</span>
+                  <span className="font-bold text-white">{metricValue(era5.annualRainfallMm, 0)} {t("unit_mm_year")}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <span className="text-white/45">Score version</span>
+                  <span className="text-white/45">{t("score_version")}</span>
                   <span className="font-mono text-xs text-primary">{copernicusSnapshot.scoreVersion}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
                   <span className="flex items-center gap-1 text-white/45">
                     <Fingerprint className="h-3.5 w-3.5" />
-                    Hash
+                    {t("hash")}
                   </span>
                   <span className="font-mono text-xs text-primary">{shortHash(copernicusSnapshot.scoreHash)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <span className="text-white/45">Local proof</span>
+                  <span className="text-white/45">{t("local_proof")}</span>
                   <span className={localProofWritten ? "font-bold text-emerald-300" : "font-bold text-yellow-200"}>
-                    {localProofWritten ? "Verified" : "Pending"}
+                    {localProofWritten ? t("verified") : t("pending")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <span className="text-white/45">Chain</span>
+                  <span className="text-white/45">{t("chain")}</span>
                   <span className="font-mono text-xs text-primary">
                     {chainLabel(chainProof.chainId)} · {chainProof.chainId}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                  <span className="text-white/45">Transaction</span>
+                  <span className="text-white/45">{t("transaction")}</span>
                   <span className="font-mono text-xs text-primary">{shortHash(chainProof.transactionHash)}</span>
                 </div>
               </div>
@@ -362,7 +297,7 @@ export default function FarmerLotDetailPage() {
                   ) : (
                     <Satellite className="mr-2 h-4 w-4" />
                   )}
-                  Refresh live analysis
+                  {t("refresh_live_analysis")}
                 </Button>
                 {!localProofWritten ? (
                   <Button
@@ -376,7 +311,7 @@ export default function FarmerLotDetailPage() {
                     ) : (
                       <ShieldCheck className="mr-2 h-4 w-4" />
                     )}
-                    Generate local proof
+                    {t("generate_local_proof")}
                   </Button>
                 ) : null}
                 {lot.code ? (
@@ -387,7 +322,7 @@ export default function FarmerLotDetailPage() {
                     onClick={() => router.push(`/lot/${encodeURIComponent(lot.code ?? "")}` as Route)}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    QR proof
+                    {t("qr_proof")}
                   </Button>
                 ) : null}
               </div>
@@ -400,14 +335,14 @@ export default function FarmerLotDetailPage() {
             </div>
           ) : (
             <div className="space-y-4 rounded-lg border border-yellow-400/20 bg-yellow-400/10 p-4">
-              <p className="text-sm font-bold text-yellow-200">Satellite score pending</p>
+              <p className="text-sm font-bold text-yellow-200">{t("satellite_pending_title")}</p>
               <p className="mt-1 text-xs leading-5 text-yellow-100/65">
-                Live Copernicus analysis starts automatically for lots with a polygon.
+                {t("live_analysis_desc")}
               </p>
               {computeCopernicus.isPending ? (
                 <div className="flex items-center gap-2 text-sm font-bold text-primary">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Running Sentinel-2, Sentinel-1, ERA5, DEM, and EUDR checks...
+                  {t("running_analysis_message")}
                 </div>
               ) : computeCopernicus.error ? (
                 <Button
@@ -416,7 +351,7 @@ export default function FarmerLotDetailPage() {
                   onClick={() => computeCopernicus.mutate({ lotId, sourceMode: "live" })}
                 >
                   <Satellite className="mr-2 h-4 w-4" />
-                  Retry live analysis
+                  {t("retry_live_analysis")}
                 </Button>
               ) : null}
               {computeCopernicus.error ? (
@@ -433,7 +368,7 @@ export default function FarmerLotDetailPage() {
               {lot.areaManzanas != null && (
                 <div>
                   <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">{t("area_manzanas")}</p>
-                  <p className="text-white font-bold">{Number(lot.areaManzanas).toFixed(2)} mz</p>
+                  <p className="text-white font-bold">{Number(lot.areaManzanas).toFixed(2)} {t("unit_mzn")}</p>
                 </div>
               )}
               {lot.plantAgeYears != null && (

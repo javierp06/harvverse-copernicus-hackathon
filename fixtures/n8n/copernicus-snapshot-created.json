@@ -1,0 +1,50 @@
+{
+  "event": "copernicus.snapshot.created",
+  "eventId": "sentinel-demo-testlot-snapshot-001",
+  "occurredAt": "2026-05-28T18:00:00.000Z",
+  "locale": "es",
+  "lotId": 101,
+  "lotCode": "testlot",
+  "publicUrl": "http://localhost:3001/lot/testlot",
+  "recipient": {
+    "type": "farmer",
+    "phone": "+50400000000",
+    "name": "Demo Farmer",
+    "whatsappOptIn": true
+  },
+  "lot": {
+    "id": 101,
+    "code": "testlot",
+    "farmName": "Finca Test 2",
+    "region": "Intibuca",
+    "country": "Honduras",
+    "altitudeMasl": 2229,
+    "areaManzanas": 8.24
+  },
+  "copernicus": {
+    "sourceMode": "live",
+    "riskScore": 77,
+    "riskTier": "good",
+    "eudrStatus": "verified",
+    "eligibleForInvestment": true,
+    "scoreHash": "a0275b8ce7f2a2c2c4e4f8ac8c6d04f5d0d91577c4b1ec9fa67e4b4d1d916ac6"
+  },
+  "yieldPredict": {
+    "projectedQuintales": 152,
+    "lowBandQuintales": 121.6,
+    "highBandQuintales": 182.4,
+    "ndviModifier": 1.16,
+    "densityModifier": 1.06
+  },
+  "proof": {
+    "chainId": 31337,
+    "chainLabel": "Hardhat local",
+    "metadataStatus": "pending",
+    "transactionHash": null
+  },
+  "message": {
+    "templateKey": "copernicus_snapshot_ready_es",
+    "title": "Analisis satelital listo",
+    "body": "Tu lote testlot tiene Risk Score 77/100, EUDR Verified y una proyeccion de 152 qq. Prueba publica: http://localhost:3001/lot/testlot"
+  }
+}

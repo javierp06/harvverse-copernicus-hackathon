@@ -284,9 +284,9 @@ export default function FarmerFarmDetailPage() {
           <GlassCard className="mb-6 border-primary/20 bg-white/[0.03] p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="section-title text-xl md:text-2xl">Lots</h2>
+                <h2 className="section-title text-xl md:text-2xl">{t("investment_lots_title")}</h2>
                 <p className="mt-1 text-sm text-white/55">
-                  Create and open lots from this farm for the Copernicus scoring flow.
+                  {t("lots_section_desc")}
                 </p>
               </div>
               <Button
@@ -295,7 +295,7 @@ export default function FarmerFarmDetailPage() {
                 onClick={() => router.push(`/dashboard/farmer/farms/${farm.id}/create-lot`)}
               >
                 <Plus className="mr-2 size-4" />
-                Create lot
+                {t("create_lot_btn")}
               </Button>
             </div>
 
@@ -308,14 +308,14 @@ export default function FarmerFarmDetailPage() {
                   >
                     <div className="min-w-0">
                       <p className="truncate font-trenda text-lg font-bold text-white">
-                        {lot.code ?? `Lot ${lot.id}`}
+                        {lot.code ?? t("lot_id", { id: lot.id })}
                       </p>
                       <p className="mt-1 flex flex-wrap gap-2 text-xs text-white/45">
                         <span className="rounded-full bg-white/[0.05] px-2 py-0.5 uppercase">
-                          {lot.status}
+                          {t(`status_${lot.status}` as any)}
                         </span>
                         {lot.variety ? <span>{lot.variety}</span> : null}
-                        {lot.areaManzanas ? <span>{Number(lot.areaManzanas).toFixed(2)} mz</span> : null}
+                        {lot.areaManzanas ? <span>{Number(lot.areaManzanas).toFixed(2)} {t("unit_mzn")}</span> : null}
                       </p>
                     </div>
                     <Button
@@ -324,14 +324,14 @@ export default function FarmerFarmDetailPage() {
                       className="border-[#67B9C1]/40 text-[#67B9C1] hover:bg-[#67B9C1]/10"
                       onClick={() => router.push(`/dashboard/farmer/lots/${lot.id}`)}
                     >
-                      Open lot
+                      {t("open_lot")}
                     </Button>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center">
-                <p className="text-sm text-white/60">No lots registered for this farm yet.</p>
+                <p className="text-sm text-white/60">{t("no_lots_yet")}</p>
               </div>
             )}
           </GlassCard>
