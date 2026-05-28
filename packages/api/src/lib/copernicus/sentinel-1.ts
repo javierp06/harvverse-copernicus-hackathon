@@ -9,6 +9,8 @@ export interface Sentinel1SarQuarter {
   quarter: string;
   vv: number | null;
   vh: number | null;
+  vhVvRatio: number | null;
+  radarVegetationIndex: number | null;
   validPixelCoverage: number | null;
 }
 
@@ -22,6 +24,8 @@ export interface Sentinel1SarRequest {
 export interface Sentinel1SarSummary {
   vv: number | null;
   vh: number | null;
+  vhVvRatio: number | null;
+  radarVegetationIndex: number | null;
   moistureProxy: Sentinel1MoistureProxy;
   structuralChangeSignal: Sentinel1StructuralChangeSignal;
   confidence: Sentinel1Confidence;
@@ -130,21 +134,28 @@ export async function fetchSentinel1SarQuarters({
     }>;
   };
 
-  return (data.data ?? []).map((interval) => ({
-    quarter: quarterFromMonth(interval.interval.from.slice(0, 7)),
-    vv: roundedOrNull(
+  return (data.data ?? []).map((interval) => {
+    const vv = roundedOrNull(
       Object.values(interval.outputs?.vv?.bands ?? {})[0]?.stats?.mean,
       4,
-    ),
-    vh: roundedOrNull(
+    );
+    const vh = roundedOrNull(
       Object.values(interval.outputs?.vh?.bands ?? {})[0]?.stats?.mean,
       4,
-    ),
-    validPixelCoverage: roundedOrNull(
-      Object.values(interval.outputs?.validMask?.bands ?? {})[0]?.stats?.mean,
-      4,
-    ),
-  }));
+    );
+
+    return {
+      quarter: quarterFromMonth(interval.interval.from.slice(0, 7)),
+      vv,
+      vh,
+      vhVvRatio: radarRatio(vh, vv),
+      radarVegetationIndex: radarVegetationIndex(vh, vv),
+      validPixelCoverage: roundedOrNull(
+        Object.values(interval.outputs?.validMask?.bands ?? {})[0]?.stats?.mean,
+        4,
+      ),
+    };
+  });
 }
 
 export function summarizeSentinel1SarQuarters(
@@ -172,6 +183,8 @@ export function summarizeSentinel1SarQuarters(
   return {
     vv: latestVv,
     vh: latestVh,
+    vhVvRatio: radarRatio(latestVh, latestVv),
+    radarVegetationIndex: radarVegetationIndex(latestVh, latestVv),
     moistureProxy:
       averageVv == null
         ? "unknown"
@@ -199,6 +212,16 @@ function quarterFromMonth(month: string): string {
 function average(values: number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function radarRatio(vh: number | null, vv: number | null): number | null {
+  if (vh == null || vv == null || vv === 0) return null;
+  return roundedOrNull(vh / vv, 4);
+}
+
+function radarVegetationIndex(vh: number | null, vv: number | null): number | null {
+  if (vh == null || vv == null || vh + vv === 0) return null;
+  return roundedOrNull((4 * vh) / (vv + vh), 4);
 }
 
 function roundedOrNull(value: unknown, digits: number): number | null {

@@ -80,9 +80,14 @@ type CopernicusSnapshotView = {
   sentinel2: {
     currentNdvi: number;
     twoYearAverageNdvi: number;
+    currentNdre?: number | null;
+    currentNdwi?: number | null;
+    currentMsi?: number | null;
     historicalSeries?: Array<{ month: string; ndvi: number }>;
   };
   sentinel1: {
+    vhVvRatio?: number | null;
+    radarVegetationIndex?: number | null;
     moistureProxy: string;
     structuralChangeSignal: string;
   };
@@ -184,6 +189,10 @@ function chainLabel(chainId: number) {
   if (chainId === 31337) return "Hardhat local";
   if (chainId === 84532) return "Base Sepolia";
   return `Chain ${chainId}`;
+}
+
+function metadataLabel(status: CopernicusSnapshotView["chain"]["metadataStatus"]) {
+  return status === "written" ? "Local proof verified" : "Pending";
 }
 
 function numberValue(value: unknown, fallback = 0) {
@@ -314,7 +323,10 @@ export default function PublicLotProofPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">Satellite Signals</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Metric icon={Leaf} label="Sentinel-2 NDVI" value={snapshot ? numberValue(snapshot.sentinel2.currentNdvi).toFixed(2) : "--"} />
+              <Metric icon={Leaf} label="Sentinel-2 NDRE" value={snapshot?.sentinel2.currentNdre == null ? "--" : numberValue(snapshot.sentinel2.currentNdre).toFixed(2)} />
+              <Metric icon={Sprout} label="Sentinel-2 NDWI" value={snapshot?.sentinel2.currentNdwi == null ? "--" : numberValue(snapshot.sentinel2.currentNdwi).toFixed(2)} />
               <Metric icon={Satellite} label="Sentinel-1 SAR" value={snapshot?.sentinel1.moistureProxy ?? "--"} />
+              <Metric icon={Satellite} label="S1 VH/VV · RVI" value={snapshot?.sentinel1.vhVvRatio == null || snapshot.sentinel1.radarVegetationIndex == null ? "--" : `${numberValue(snapshot.sentinel1.vhVvRatio).toFixed(2)} · ${numberValue(snapshot.sentinel1.radarVegetationIndex).toFixed(2)}`} />
               <Metric icon={Sprout} label="ERA5 Rainfall" value={snapshot ? `${numberValue(snapshot.era5.annualRainfallMm)} mm` : "--"} />
               <Metric icon={ChartNoAxesColumn} label="DEM Altitude" value={snapshot ? `${numberValue(snapshot.dem.altitudeMasl)} masl` : "--"} />
             </div>
@@ -366,7 +378,7 @@ export default function PublicLotProofPage() {
               <div className="mt-4 space-y-3 text-sm">
                 <ProofRow label="Score hash" value={shortHash(snapshot.scoreHash)} mono />
                 <ProofRow label="Chain" value={`${chainLabel(snapshot.chain.chainId)} · ${snapshot.chain.chainId}`} />
-                <ProofRow label="Metadata" value={snapshot.chain.metadataStatus} />
+                <ProofRow label="Local proof" value={metadataLabel(snapshot.chain.metadataStatus)} />
                 <ProofRow label="Confidence" value={snapshot.dataQuality.confidence} />
                 <ProofRow label="Completeness" value={`${Math.round(snapshot.dataQuality.completeness * 100)}%`} />
                 <ProofRow label="Parcel confidence" value={snapshot.dataQuality.parcelScale.confidence} />

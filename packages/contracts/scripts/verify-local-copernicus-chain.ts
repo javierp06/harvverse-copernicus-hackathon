@@ -9,7 +9,7 @@ import { ethers, network } from "hardhat";
 import fs from "fs";
 import path from "path";
 
-const DEMO_LOT_CODE = "HV-HN-ZAF-L02";
+const DEFAULT_LOT_CODE = "HV-HN-ZAF-L02";
 const DEMO_LOT = {
   targetYieldTenthsQq: 600,
   priceCentsPerLb: 350,
@@ -70,11 +70,7 @@ async function main() {
     process.env.LOT_CODE ??
     snapshot.lotCode ??
     snapshot.signedPayload?.payload?.lotCode ??
-    DEMO_LOT_CODE;
-
-  if (lotCode !== DEMO_LOT_CODE) {
-    throw new Error(`Local verifier expects ${DEMO_LOT_CODE}, received ${lotCode}`);
-  }
+    DEFAULT_LOT_CODE;
 
   const [deployer] = await ethers.getSigners();
   const chain = await ethers.provider.getNetwork();

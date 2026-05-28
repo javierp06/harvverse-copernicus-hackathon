@@ -7,6 +7,9 @@ export interface Sentinel2Polygon {
 export interface Sentinel2NdviMonth {
   month: string;
   ndvi: number | null;
+  ndre: number | null;
+  ndwi: number | null;
+  msi: number | null;
   validPixelCoverage: number | null;
   cloudCoverage: number | null;
 }
@@ -23,9 +26,12 @@ export interface Sentinel2NdviRequest {
 const SENTINEL_2_NDVI_EVALSCRIPT = `//VERSION=3
 function setup() {
   return {
-    input: [{ bands: ["B04", "B08", "SCL", "dataMask"] }],
+    input: [{ bands: ["B04", "B05", "B08", "B8A", "B11", "SCL", "dataMask"] }],
     output: [
       { id: "ndvi", bands: 1, sampleType: "FLOAT32" },
+      { id: "ndre", bands: 1, sampleType: "FLOAT32" },
+      { id: "ndwi", bands: 1, sampleType: "FLOAT32" },
+      { id: "msi", bands: 1, sampleType: "FLOAT32" },
       { id: "dataMask", bands: 1, sampleType: "FLOAT32" },
       { id: "validMask", bands: 1, sampleType: "FLOAT32" },
       { id: "cloudMask", bands: 1, sampleType: "FLOAT32" }
@@ -36,8 +42,14 @@ function evaluatePixel(s) {
   const isCloud = [3, 8, 9, 10, 11].includes(s.SCL);
   const valid = s.dataMask === 1 && !isCloud && (s.B08 + s.B04) !== 0;
   const ndvi = valid ? (s.B08 - s.B04) / (s.B08 + s.B04) : NaN;
+  const ndre = valid && (s.B8A + s.B05) !== 0 ? (s.B8A - s.B05) / (s.B8A + s.B05) : NaN;
+  const ndwi = valid && (s.B08 + s.B11) !== 0 ? (s.B08 - s.B11) / (s.B08 + s.B11) : NaN;
+  const msi = valid && s.B08 !== 0 ? s.B11 / s.B08 : NaN;
   return {
     ndvi: [ndvi],
+    ndre: [ndre],
+    ndwi: [ndwi],
+    msi: [msi],
     dataMask: [s.dataMask],
     validMask: [valid ? 1 : 0],
     cloudMask: [isCloud ? 1 : 0]
@@ -161,6 +173,9 @@ export async function fetchSentinel2NdviMonths({
       interval: { from: string };
       outputs?: {
         ndvi?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
+        ndre?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
+        ndwi?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
+        msi?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
         validMask?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
         cloudMask?: { bands?: Record<string, { stats?: { mean?: number | null } }> };
       };
@@ -171,6 +186,18 @@ export async function fetchSentinel2NdviMonths({
     month: interval.interval.from.slice(0, 7),
     ndvi: roundedOrNull(
       Object.values(interval.outputs?.ndvi?.bands ?? {})[0]?.stats?.mean,
+      4,
+    ),
+    ndre: roundedOrNull(
+      Object.values(interval.outputs?.ndre?.bands ?? {})[0]?.stats?.mean,
+      4,
+    ),
+    ndwi: roundedOrNull(
+      Object.values(interval.outputs?.ndwi?.bands ?? {})[0]?.stats?.mean,
+      4,
+    ),
+    msi: roundedOrNull(
+      Object.values(interval.outputs?.msi?.bands ?? {})[0]?.stats?.mean,
       4,
     ),
     validPixelCoverage: roundedOrNull(

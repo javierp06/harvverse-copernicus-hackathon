@@ -101,14 +101,22 @@ export interface CopernicusLotSnapshot {
     historicalSeries: Array<{
       month: string;
       ndvi: number;
+      ndre: number | null;
+      ndwi: number | null;
+      msi: number | null;
       validPixelCoverage: number;
       cloudCoverage: number;
     }>;
+    currentNdre: number | null;
+    currentNdwi: number | null;
+    currentMsi: number | null;
     cloudFilter: string;
   };
   sentinel1: {
     vv: number;
     vh: number;
+    vhVvRatio: number | null;
+    radarVegetationIndex: number | null;
     moistureProxy: "low" | "medium" | "high";
     structuralChangeSignal: "none" | "possible_change";
   };
@@ -203,9 +211,15 @@ function buildFixtureNdviSeries(lotId: number) {
     const date = new Date(Date.UTC(2024, 5 + index, 1));
     const seasonalSignal = Math.sin(index / 3) * 0.025;
     const ndvi = Number((baseline + seasonalSignal).toFixed(3));
+    const ndre = Number((0.38 + seasonalSignal * 0.7 + ((lotId % 3) * 0.012)).toFixed(3));
+    const ndwi = Number((0.24 + seasonalSignal * 0.5 + ((lotId % 4) * 0.01)).toFixed(3));
+    const msi = Number((0.72 - seasonalSignal * 0.6 - ((lotId % 3) * 0.018)).toFixed(3));
     return {
       month: date.toISOString().slice(0, 7),
       ndvi,
+      ndre,
+      ndwi,
+      msi,
       validPixelCoverage: Number((0.78 + ((index % 4) * 0.03)).toFixed(2)),
       cloudCoverage: Number((0.16 + ((index % 3) * 0.04)).toFixed(2)),
     };
@@ -234,6 +248,34 @@ function scoreNdviAverage(avg: number): number {
   return 100;
 }
 
+function scoreNdreAverage(avg: number | null): number {
+  if (avg == null) return 65;
+  if (avg < 0.16) return 20;
+  if (avg <= 0.28) return lerp(avg, 0.16, 0.28, 20, 70);
+  if (avg <= 0.42) return lerp(avg, 0.28, 0.42, 70, 100);
+  return 100;
+}
+
+function scoreCanopyWater(ndwi: number | null, msi: number | null): number {
+  const ndwiScore =
+    ndwi == null
+      ? 65
+      : ndwi < 0.05
+        ? 25
+        : ndwi <= 0.22
+          ? lerp(ndwi, 0.05, 0.22, 25, 80)
+          : 100;
+  const msiScore =
+    msi == null
+      ? 65
+      : msi <= 0.65
+        ? 100
+        : msi <= 1
+          ? lerp(msi, 0.65, 1, 100, 50)
+          : 20;
+  return Math.round((ndwiScore + msiScore) / 2);
+}
+
 function scoreNdviStability(values: number[]): number {
   const clean = values.filter((value) => value >= 0.2);
   if (clean.length < 6) return 50;
@@ -251,6 +293,12 @@ function scoreSentinel1Moisture(value: "low" | "medium" | "high" | "unknown"): n
   if (value === "high") return 70;
   if (value === "low") return 55;
   return 50;
+}
+
+function averageNullable(values: Array<number | null | undefined>): number | null {
+  const clean = values.filter((value): value is number => typeof value === "number");
+  if (clean.length === 0) return null;
+  return Number((clean.reduce((sum, value) => sum + value, 0) / clean.length).toFixed(4));
 }
 
 function scoreAnnualRainfall(annualMm: number): number {
@@ -339,11 +387,22 @@ export function buildFixtureCopernicusSnapshot(
   const areaManzanas = toNumber(lot.areaManzanas) ?? 2.4;
   const ndviSeries = buildFixtureNdviSeries(lot.id);
   const currentNdvi = ndviSeries.at(-1)?.ndvi ?? 0.72;
+  const currentNdre = ndviSeries.at(-1)?.ndre ?? null;
+  const currentNdwi = ndviSeries.at(-1)?.ndwi ?? null;
+  const currentMsi = ndviSeries.at(-1)?.msi ?? null;
   const twoYearAverageNdvi = Number(
     (
       ndviSeries.reduce((sum, month) => sum + month.ndvi, 0) /
       ndviSeries.length
     ).toFixed(3),
+  );
+  const twoYearAverageNdre = averageNullable(ndviSeries.map((month) => month.ndre));
+  const opticalHealthScore = Math.round(
+    (
+      scoreNdviAverage(twoYearAverageNdvi) +
+      scoreNdreAverage(twoYearAverageNdre) +
+      scoreCanopyWater(currentNdwi, currentMsi)
+    ) / 3,
   );
   const annualRainfallMm = 1680 + ((lot.id % 4) * 45);
   const meanTemperatureC = Number((20.8 + ((lot.id % 3) * 0.4)).toFixed(1));
@@ -352,9 +411,9 @@ export function buildFixtureCopernicusSnapshot(
   const variables: SentinelScoreVariable[] = [
     {
       key: "sentinel2_current_ndvi",
-      label: "Sentinel-2 current NDVI",
-      value: currentNdvi,
-      score: 86,
+      label: "Sentinel-2 optical canopy health",
+      value: `NDVI ${currentNdvi} / NDRE ${currentNdre ?? "n/a"} / NDWI ${currentNdwi ?? "n/a"}`,
+      score: opticalHealthScore,
       weight: 20,
       source: "sentinel-2",
     },
@@ -368,8 +427,8 @@ export function buildFixtureCopernicusSnapshot(
     },
     {
       key: "sentinel1_moisture",
-      label: "Sentinel-1 SAR moisture proxy",
-      value: "medium",
+      label: "Sentinel-1 SAR structure and moisture",
+      value: "medium · VH/VV 0.25 · RVI 0.80",
       score: 76,
       weight: 10,
       source: "sentinel-1",
@@ -423,7 +482,7 @@ export function buildFixtureCopernicusSnapshot(
       mode: "fixture",
       dateRange: { from: "2024-06-01", to: evidenceTo },
       resolution: "10m",
-      notes: "NDVI fixture follows the live Sentinel-2 L2A Statistics API contract with SCL cloud and shadow masking.",
+      notes: "Optical fixture follows the live Sentinel-2 L2A Statistics API contract for NDVI, NDRE, NDWI, and MSI with SCL cloud and shadow masking.",
     },
     {
       key: "sentinel-1",
@@ -432,7 +491,7 @@ export function buildFixtureCopernicusSnapshot(
       mode: "fixture",
       dateRange: { from: "2024-06-01", to: evidenceTo },
       resolution: "10m",
-      notes: "SAR fixture preserves the VV/VH and moisture-proxy fields expected from the live radar path.",
+      notes: "SAR fixture preserves the VV, VH, VH/VV, RVI, and moisture-proxy fields expected from the live radar path.",
     },
     {
       key: "dem",
@@ -479,6 +538,7 @@ export function buildFixtureCopernicusSnapshot(
       "This deterministic demo snapshot is not a final financing decision.",
       "EUDR status must be re-computed from live land-cover evidence before production use.",
       "Sentinel-1 IW GRD is treated as a contextual proxy for small lots, not a precise parcel-level soil moisture measurement.",
+      "Coffee agroforestry and shade trees can make optical vegetation indices resemble forest; SAR texture and field context remain important.",
     ],
     parcelScale,
   };
@@ -521,11 +581,16 @@ export function buildFixtureCopernicusSnapshot(
       currentNdvi,
       twoYearAverageNdvi,
       historicalSeries: ndviSeries,
+      currentNdre,
+      currentNdwi,
+      currentMsi,
       cloudFilter: "Sentinel-2 L2A SCL cloud and shadow mask",
     },
     sentinel1: {
       vv: -8.7,
       vh: -15.4,
+      vhVvRatio: 0.25,
+      radarVegetationIndex: 0.8,
       moistureProxy: "medium",
       structuralChangeSignal: "none",
     },
@@ -642,19 +707,32 @@ export async function buildLiveCopernicusSnapshot(
       ? null
       : Math.abs(selfReportedAltitude - demSummary.altitudeMasl);
   const currentNdvi = scoreMonths.at(-1)?.ndvi ?? 0;
+  const currentNdre = scoreMonths.at(-1)?.ndre ?? null;
+  const currentNdwi = scoreMonths.at(-1)?.ndwi ?? null;
+  const currentMsi = scoreMonths.at(-1)?.msi ?? null;
   const twoYearAverageNdvi = Number(
     (
       scoreMonths.reduce((sum, month) => sum + month.ndvi, 0) /
       scoreMonths.length
     ).toFixed(4),
   );
-  const ndviAverageScore = Math.round(scoreNdviAverage(twoYearAverageNdvi));
+  const twoYearAverageNdre = averageNullable(scoreMonths.map((month) => month.ndre));
+  const opticalHealthScore = Math.round(
+    (
+      scoreNdviAverage(twoYearAverageNdvi) +
+      scoreNdreAverage(twoYearAverageNdre) +
+      scoreCanopyWater(currentNdwi, currentMsi)
+    ) / 3,
+  );
   const ndviStabilityScore = Math.round(
     scoreNdviStability(scoreMonths.map((month) => month.ndvi)),
   );
   const historicalSeries = scoreMonths.map((month) => ({
     month: month.month,
     ndvi: month.ndvi,
+    ndre: month.ndre,
+    ndwi: month.ndwi,
+    msi: month.msi,
     validPixelCoverage: month.validPixelCoverage ?? 0,
     cloudCoverage: month.cloudCoverage ?? 0,
   }));
@@ -662,8 +740,8 @@ export async function buildLiveCopernicusSnapshot(
     if (variable.key === "sentinel2_current_ndvi") {
       return {
         ...variable,
-        value: currentNdvi,
-        score: ndviAverageScore,
+        value: `NDVI ${currentNdvi} / NDRE ${currentNdre ?? "n/a"} / NDWI ${currentNdwi ?? "n/a"}`,
+        score: opticalHealthScore,
       };
     }
     if (variable.key === "sentinel2_ndvi_stability") {
@@ -676,7 +754,7 @@ export async function buildLiveCopernicusSnapshot(
     if (variable.key === "sentinel1_moisture") {
       return {
         ...variable,
-        value: sentinel1Summary.moistureProxy,
+        value: `${sentinel1Summary.moistureProxy} · VH/VV ${sentinel1Summary.vhVvRatio ?? "n/a"} · RVI ${sentinel1Summary.radarVegetationIndex ?? "n/a"}`,
         score: scoreSentinel1Moisture(sentinel1Summary.moistureProxy),
       };
     }
@@ -730,7 +808,7 @@ export async function buildLiveCopernicusSnapshot(
             to: historicalSeries.at(-1)?.month ?? source.dateRange.to,
           },
           notes:
-            "Live NDVI uses Sentinel-2 L2A Statistics API with SCL cloud and shadow masking.",
+            "Live optical metrics use Sentinel-2 L2A Statistics API for NDVI, NDRE, NDWI, and MSI with SCL cloud and shadow masking.",
         }
       : source.key === "sentinel-1"
         ? {
@@ -741,7 +819,7 @@ export async function buildLiveCopernicusSnapshot(
               to: sarQuarters.at(-1)?.quarter ?? source.dateRange.to,
             },
             notes:
-              "Live SAR uses Sentinel-1 GRD IW dual-polarization VV/VH quarterly backscatter through the Sentinel Hub Statistics API.",
+              "Live SAR uses Sentinel-1 GRD IW dual-polarization VV/VH quarterly backscatter plus VH/VV and RVI through the Sentinel Hub Statistics API.",
           }
       : source.key === "era5"
         ? {
@@ -806,6 +884,7 @@ export async function buildLiveCopernicusSnapshot(
       "Sentinel-2 NDVI, Sentinel-1 SAR, ERA5 climate, Copernicus DEM altitude, and Sentinel-2 EUDR continuity evidence are live.",
       "EUDR uses a live Sentinel-2 continuity screen in this slice; official JRC baseline intersection is still pending.",
       "DEM altitude uses Open-Meteo's Copernicus DEM GLO-90 endpoint, not direct CDSE DEM.",
+      "Coffee agroforestry and shade trees can make optical indices resemble forest; interpret NDRE/NDWI with SAR and field context.",
       ...(altitudeDelta != null && altitudeDelta > 300
         ? [`Stored altitude differs from DEM by ${Math.round(altitudeDelta)} masl; check the demo polygon or lot metadata.`]
         : []),
@@ -861,11 +940,17 @@ export async function buildLiveCopernicusSnapshot(
       currentNdvi,
       twoYearAverageNdvi,
       historicalSeries,
+      currentNdre,
+      currentNdwi,
+      currentMsi,
       cloudFilter: "Sentinel-2 L2A SCL cloud and shadow mask",
     },
     sentinel1: {
       vv: sentinel1Summary.vv ?? fixture.sentinel1.vv,
       vh: sentinel1Summary.vh ?? fixture.sentinel1.vh,
+      vhVvRatio: sentinel1Summary.vhVvRatio ?? fixture.sentinel1.vhVvRatio,
+      radarVegetationIndex:
+        sentinel1Summary.radarVegetationIndex ?? fixture.sentinel1.radarVegetationIndex,
       moistureProxy:
         sentinel1Summary.moistureProxy === "unknown"
           ? fixture.sentinel1.moistureProxy

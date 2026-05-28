@@ -7,6 +7,7 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 const nextConfig: NextConfig = {
   typedRoutes: true,
   reactCompiler: true,
+  allowedDevOrigins: ["192.168.195.107"],
   experimental: {
     optimizePackageImports: [
       "@clerk/nextjs",

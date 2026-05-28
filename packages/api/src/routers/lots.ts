@@ -1,4 +1,9 @@
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { promisify } from "node:util";
 
 import {
   copernicusSnapshots,
@@ -30,6 +35,7 @@ import {
 const lotStatusSchema = z.enum(lotStatusEnum.enumValues);
 const copernicusSourceModeSchema = z.enum(copernicusSourceModeEnum.enumValues);
 const lotCreateStatusSchema = z.enum(["draft", "available"]);
+const execFileAsync = promisify(execFile);
 const lotCreateSchema = insertLotSchema.pick({
   farmId: true,
   code: true,
@@ -71,6 +77,89 @@ type PublicLotRecord = typeof lots.$inferSelect & {
   farm: typeof farms.$inferSelect;
   plans: Array<typeof plans.$inferSelect>;
 };
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+type LocalChainProofResult = {
+  ok: boolean;
+  chainId: number;
+  contractAddress: string;
+  transactionHash: string;
+  lotId: string;
+};
+
+function resolveRepoRoot() {
+  const cwd = process.cwd();
+  if (path.basename(cwd) === "web" && path.basename(path.dirname(cwd)) === "apps") {
+    return path.resolve(cwd, "..", "..");
+  }
+  return cwd;
+}
+
+async function runLocalCopernicusVerifier(
+  snapshot: typeof copernicusSnapshots.$inferSelect,
+  lotCode: string,
+): Promise<LocalChainProofResult> {
+  const repoRoot = resolveRepoRoot();
+  const contractsDir = path.join(repoRoot, "packages", "contracts");
+  const hardhatBin = path.join(
+    contractsDir,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "hardhat.cmd" : "hardhat",
+  );
+  const tempDir = await mkdtemp(path.join(tmpdir(), "harvverse-copernicus-"));
+
+  try {
+    const snapshotPath = path.join(tempDir, "snapshot.json");
+    const outputPath = path.join(tempDir, "proof.json");
+    await writeFile(
+      snapshotPath,
+      `${JSON.stringify(
+        {
+          lotCode,
+          riskScore: snapshot.riskScore,
+          eudrStatus: snapshot.eudrStatus,
+          eligibleForInvestment: snapshot.eligibleForInvestment,
+          scoreHash: snapshot.scoreHash,
+          scoreVersion: snapshot.scoreVersion,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    if (env.NODE_ENV !== "development") {
+      throw new Error("Local Hardhat proof generation is only supported in development.");
+    }
+
+    await execFileAsync(
+      hardhatBin,
+      ["run", "scripts/verify-local-copernicus-chain.ts", "--network", "hardhat"],
+      {
+        cwd: contractsDir,
+        env: {
+          ...process.env,
+          LOT_CODE: lotCode,
+          SNAPSHOT_PATH: snapshotPath,
+          OUTPUT_PATH: outputPath,
+        },
+        timeout: 120_000,
+        maxBuffer: 1024 * 1024,
+      },
+    );
+
+    const result = JSON.parse(await readFile(outputPath, "utf8")) as LocalChainProofResult;
+    if (!result.ok) {
+      throw new Error("Local Hardhat verifier returned ok=false.");
+    }
+    return result;
+  } finally {
+    await rm(tempDir, { force: true, recursive: true });
+  }
+}
 
 function toPublicLot(lot: PublicLotRecord) {
   return {
@@ -399,6 +488,84 @@ export const lotsRouter = router({
 
         return { snapshot: created, payload: snapshot };
       });
+    }),
+
+  markLocalCopernicusProof: protectedProcedure
+    .input(z.object({ lotId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const requestingUser = await ctx.db.query.users.findFirst({
+        where: eq(users.clerkId, ctx.clerkId),
+      });
+      if (!requestingUser) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+      }
+
+      const lot = await ctx.db.query.lots.findFirst({
+        where: eq(lots.id, input.lotId),
+        with: { farm: true },
+      });
+      if (!lot) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Lot not found" });
+      }
+      if (lot.farm.farmerId !== requestingUser.id && requestingUser.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You cannot write proof for this lot" });
+      }
+
+      const snapshot = await ctx.db.query.copernicusSnapshots.findFirst({
+        where: eq(copernicusSnapshots.lotId, input.lotId),
+        orderBy: [desc(copernicusSnapshots.createdAt)],
+      });
+      if (!snapshot) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Compute a Copernicus snapshot before writing a local proof.",
+        });
+      }
+
+      const existingChain = asRecord(snapshot.chain);
+      const lotCode = lot.code ?? `LOT-${lot.id}`;
+      const proof = await runLocalCopernicusVerifier(snapshot, lotCode).catch(
+        (error: unknown) => {
+          const details =
+            error instanceof Error ? error.message : "Local Hardhat verifier failed.";
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Local Hardhat proof failed: ${details}`,
+          });
+        },
+      );
+      const now = new Date();
+      const chain = {
+        ...existingChain,
+        chainId: proof.chainId,
+        contractAddress:
+          proof.contractAddress ?? env.HARVVERSE_LOT_ADDRESS ?? existingChain.contractAddress ?? null,
+        transactionHash: proof.transactionHash,
+        metadataStatus: "written",
+        proofMode: "local-hardhat-in-memory",
+        lotId: proof.lotId,
+        verifiedAt: now.toISOString(),
+      };
+
+      const [updated] = await ctx.db
+        .update(copernicusSnapshots)
+        .set({ chain })
+        .where(eq(copernicusSnapshots.id, snapshot.id))
+        .returning();
+
+      if (!updated) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Local proof update returned no row",
+        });
+      }
+
+      await ctx.db
+        .update(lots)
+        .set({ updatedAt: now })
+        .where(eq(lots.id, input.lotId));
+
+      return { snapshot: updated, chain };
     }),
 
   create: protectedProcedure

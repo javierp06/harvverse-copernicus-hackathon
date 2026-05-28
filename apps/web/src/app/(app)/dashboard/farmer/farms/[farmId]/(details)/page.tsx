@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, ExternalLink, HelpCircle, ImagePlus, Loader2, MapPin, Mountain, RotateCcw, Satellite, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, ExternalLink, HelpCircle, ImagePlus, Loader2, MapPin, Mountain, Plus, RotateCcw, Satellite, XCircle } from "lucide-react";
 import type { Polygon } from "geojson";
 
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
@@ -130,6 +130,15 @@ export default function FarmerFarmDetailPage() {
                 <Button
                   type="button"
                   className="h-9 bg-primary text-[#001020] hover:bg-primary/90"
+                  onClick={() => router.push(`/dashboard/farmer/farms/${farm.id}/create-lot`)}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Create lot
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 border-white/15 text-white/75 hover:bg-white/10 hover:text-white"
                   onClick={() => router.push(`/dashboard/farmer/farms/${farm.id}/edit`)}
                 >
                   <Edit3 className="mr-2 size-4" />
@@ -272,10 +281,61 @@ export default function FarmerFarmDetailPage() {
             </GlassCard>
           ) : null}
 
-          {/*
-            Lot management is still present elsewhere in the app, but the farm
-            detail screen is focused on farm registration for the current release step.
-          */}
+          <GlassCard className="mb-6 border-primary/20 bg-white/[0.03] p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="section-title text-xl md:text-2xl">Lots</h2>
+                <p className="mt-1 text-sm text-white/55">
+                  Create and open lots from this farm for the Copernicus scoring flow.
+                </p>
+              </div>
+              <Button
+                type="button"
+                className="bg-primary font-black text-[#001020] hover:bg-primary/90"
+                onClick={() => router.push(`/dashboard/farmer/farms/${farm.id}/create-lot`)}
+              >
+                <Plus className="mr-2 size-4" />
+                Create lot
+              </Button>
+            </div>
+
+            {farm.lots.length > 0 ? (
+              <div className="grid gap-3">
+                {farm.lots.map((lot) => (
+                  <div
+                    key={lot.id}
+                    className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-trenda text-lg font-bold text-white">
+                        {lot.code ?? `Lot ${lot.id}`}
+                      </p>
+                      <p className="mt-1 flex flex-wrap gap-2 text-xs text-white/45">
+                        <span className="rounded-full bg-white/[0.05] px-2 py-0.5 uppercase">
+                          {lot.status}
+                        </span>
+                        {lot.variety ? <span>{lot.variety}</span> : null}
+                        {lot.areaManzanas ? <span>{Number(lot.areaManzanas).toFixed(2)} mz</span> : null}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-[#67B9C1]/40 text-[#67B9C1] hover:bg-[#67B9C1]/10"
+                      onClick={() => router.push(`/dashboard/farmer/lots/${lot.id}`)}
+                    >
+                      Open lot
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center">
+                <p className="text-sm text-white/60">No lots registered for this farm yet.</p>
+              </div>
+            )}
+          </GlassCard>
+
           {expandedImage ? (
             <button
               type="button"
