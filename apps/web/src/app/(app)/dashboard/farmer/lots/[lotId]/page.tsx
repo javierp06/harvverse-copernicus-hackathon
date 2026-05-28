@@ -4,7 +4,7 @@ import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Ban, ExternalLink, Fingerprint, HelpCircle, Loader2, MapPin, Mountain, Pencil, ShieldCheck, Sprout, TreePine } from "lucide-react";
+import { ArrowLeft, Ban, ExternalLink, Fingerprint, HelpCircle, Loader2, MapPin, Mountain, Pencil, Satellite, ShieldCheck, Sprout, TreePine } from "lucide-react";
 
 import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
@@ -87,6 +87,16 @@ function chainLabel(chainId: number) {
   return chainId === 31337 ? "Hardhat local" : `Chain ${chainId}`;
 }
 
+function numberValue(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function metricValue(value: unknown, digits = 2) {
+  const parsed = numberValue(value);
+  return parsed == null ? "Pending" : parsed.toFixed(digits);
+}
+
 export default function FarmerLotDetailPage() {
   const router = useRouter();
   const params = useParams<{ lotId: string }>();
@@ -103,6 +113,15 @@ export default function FarmerLotDetailPage() {
   );
   const markLocalProof = useMutation(
     trpc.lots.markLocalCopernicusProof.mutationOptions({
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({
+          queryKey: trpc.lots.byId.queryKey({ id: lotId }),
+        });
+      },
+    }),
+  );
+  const computeCopernicus = useMutation(
+    trpc.lots.computeCopernicusSnapshot.mutationOptions({
       onSuccess: async () => {
         await queryClient.invalidateQueries({
           queryKey: trpc.lots.byId.queryKey({ id: lotId }),
@@ -142,6 +161,10 @@ export default function FarmerLotDetailPage() {
   const copernicusEligible = copernicusSnapshot?.eligibleForInvestment === true;
   const chainProof = getSnapshotChain(copernicusSnapshot);
   const localProofWritten = chainProof.metadataStatus === "written";
+  const sentinel2 = asRecord(copernicusSnapshot?.sentinel2);
+  const sentinel1 = asRecord(copernicusSnapshot?.sentinel1);
+  const dem = asRecord(copernicusSnapshot?.dem);
+  const era5 = asRecord(copernicusSnapshot?.era5);
 
   return (
     <div className="mx-auto max-w-7xl px-4 md:px-0 text-[#EEEEEE]">
@@ -271,6 +294,34 @@ export default function FarmerLotDetailPage() {
                   <span className="font-bold text-white">{eudrLabel(copernicusSnapshot.eudrStatus)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <span className="text-white/45">DEM altitude</span>
+                  <span className="font-bold text-white">{metricValue(dem.altitudeMasl, 0)} masl</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S2 NDVI</span>
+                    <p className="mt-1 font-mono text-sm text-primary">{metricValue(sentinel2.currentNdvi)}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S2 NDRE</span>
+                    <p className="mt-1 font-mono text-sm text-primary">{metricValue(sentinel2.currentNdre)}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S2 NDWI</span>
+                    <p className="mt-1 font-mono text-sm text-primary">{metricValue(sentinel2.currentNdwi)}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">S1 VH/VV · RVI</span>
+                    <p className="mt-1 font-mono text-sm text-primary">
+                      {metricValue(sentinel1.vhVvRatio)} · {metricValue(sentinel1.radarVegetationIndex)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                  <span className="text-white/45">ERA5 rainfall</span>
+                  <span className="font-bold text-white">{metricValue(era5.annualRainfallMm, 0)} mm/year</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
                   <span className="text-white/45">Score version</span>
                   <span className="font-mono text-xs text-primary">{copernicusSnapshot.scoreVersion}</span>
                 </div>
@@ -300,6 +351,20 @@ export default function FarmerLotDetailPage() {
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-primary/30 text-primary hover:bg-primary/10"
+                  disabled={computeCopernicus.isPending}
+                  onClick={() => computeCopernicus.mutate({ lotId, sourceMode: "live" })}
+                >
+                  {computeCopernicus.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Satellite className="mr-2 h-4 w-4" />
+                  )}
+                  Refresh live analysis
+                </Button>
                 {!localProofWritten ? (
                   <Button
                     size="sm"
@@ -330,13 +395,32 @@ export default function FarmerLotDetailPage() {
               {markLocalProof.error ? (
                 <p className="text-xs leading-5 text-red-300">{markLocalProof.error.message}</p>
               ) : null}
+              {computeCopernicus.error ? (
+                <p className="text-xs leading-5 text-red-300">{computeCopernicus.error.message}</p>
+              ) : null}
             </div>
           ) : (
-            <div className="rounded-lg border border-yellow-400/20 bg-yellow-400/10 p-4">
+            <div className="space-y-4 rounded-lg border border-yellow-400/20 bg-yellow-400/10 p-4">
               <p className="text-sm font-bold text-yellow-200">Satellite score pending</p>
               <p className="mt-1 text-xs leading-5 text-yellow-100/65">
                 Compute a Copernicus snapshot before this lot can receive on-chain investment.
               </p>
+              <Button
+                size="sm"
+                className="bg-primary text-[#001020] hover:bg-primary/90 font-bold"
+                disabled={computeCopernicus.isPending}
+                onClick={() => computeCopernicus.mutate({ lotId, sourceMode: "live" })}
+              >
+                {computeCopernicus.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Satellite className="mr-2 h-4 w-4" />
+                )}
+                Run live Copernicus analysis
+              </Button>
+              {computeCopernicus.error ? (
+                <p className="text-xs leading-5 text-red-300">{computeCopernicus.error.message}</p>
+              ) : null}
             </div>
           )}
         </GlassCard>
