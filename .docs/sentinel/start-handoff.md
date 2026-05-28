@@ -12,7 +12,7 @@ Runtime surfaces now exist for integration work:
 - n8n/WhatsApp development webhook: `/api/sentinel/alerts`
 - Snapshot read procedure: `lots.publicByCode({ code })`
 
-The real backend should keep the same field names while Javier replaces fixture values with live Copernicus signals and Base L2 writes.
+The real backend should keep the same field names while Javier replaces fixture values with live Copernicus signals and local contract proof writes.
 
 ## What Javier Must Hand Off First
 
@@ -27,13 +27,13 @@ Already enough for parallel work:
 Javier-owned pieces now available:
 
 - Live Sentinel-2, Sentinel-1, DEM, ERA5, and preliminary EUDR continuity integrations.
-- Base L2 score metadata payload and local write script.
+- Local Hardhat score metadata payload and local write script.
 - Smart-contract eligibility enforcement.
 - Chain proof verifier: `pnpm verify:copernicus-chain-proof`.
 
 Still Javier-owned:
 
-- Actual Base L2 testnet write when the team decides to use a live chain.
+- Production Base L2 deployment is out of the current hackathon local-demo scope.
 - Official JRC forest baseline intersection if we go beyond the hackathon EUDR continuity screen.
 - Final endpoint names if they change.
 
@@ -51,7 +51,7 @@ Priority screens:
    - Risk Score with seven-variable breakdown.
    - EUDR status and marketplace eligibility.
    - Data quality confidence, completeness, and source datasets.
-   - Evidence hash and Base L2 proof state.
+   - Evidence hash and local chain proof state.
 
 Important UI rule:
 
@@ -64,7 +64,7 @@ Expected labels:
 - `Sentinel-2 NDVI 0.74`
 - `YieldPredict 66.8-87 qq`
 - `Evidence hash`
-- `Base L2 pending` or `Base L2 verified`
+- `Local proof pending` or `Local proof verified`
 
 ## Sheyla Can Start
 
@@ -98,14 +98,14 @@ Example partner message:
 ```text
 Nuevo lote verificado por Copernicus: Finca Zafiro, Honduras.
 Risk Score: 85/100. EUDR Verified.
-YieldPredict: 66.8-87 qq. Evidence hash disponible para Base L2.
+YieldPredict: 66.8-87 qq. Evidence hash disponible para prueba local.
 ```
 
 ## What Still Blocks Final Integration
 
-- Jesus can build UI now; final polish waits for live snapshot data and Base L2 transaction values.
+- Jesus can build UI now; final polish waits for live snapshot data and local proof values.
 - Sheyla can build flows now; production delivery waits for final phone credentials and n8n deployment.
-- Contract proof display can show `pending` now, but final proof waits for Base L2 metadata writes.
+- Contract proof display can show `pending` now, and the hackathon proof can be verified with the local Hardhat script.
 
 ## Suggested Team Message
 
@@ -116,5 +116,5 @@ Jesus: build from the public QR route `/lot/[code]`, plus Open Farms cards and p
 
 Sheyla: build n8n/WhatsApp flows against `/api/sentinel/alerts` using events like `score.calculated`, `eudr.blocked`, and `partner.snapshot_ready`.
 
-Javier will keep replacing fixture fields with live Sentinel-2, Sentinel-1, DEM, ERA5/EUDR data and Base L2 writes, but the payload shape should stay stable.
+Javier will keep replacing fixture fields with live Sentinel-2, Sentinel-1, DEM, ERA5/EUDR data and local contract proof values, but the payload shape should stay stable.
 ```

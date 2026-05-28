@@ -91,7 +91,7 @@ async function main() {
 			undefined,
 	);
 	const chainId = Number(
-		optionalEnv("CHAIN_ID") ?? chainWriteResult?.chainId ?? 84532,
+		optionalEnv("CHAIN_ID") ?? chainWriteResult?.chainId ?? 31337,
 	);
 
 	if (!Number.isInteger(chainId) || chainId <= 0) {

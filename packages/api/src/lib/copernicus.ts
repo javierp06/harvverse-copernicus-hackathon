@@ -472,7 +472,7 @@ export function buildFixtureCopernicusSnapshot(
     },
     warnings: [
       "Fixture mode: provider calls are not executed yet.",
-      "Base L2 metadata write is pending.",
+      "Local contract metadata write is pending.",
       ...(parcelScale.warning ? [parcelScale.warning] : []),
     ],
     limitations: [
@@ -576,7 +576,7 @@ export function buildFixtureCopernicusSnapshot(
     chain: {
       transactionHash: null,
       contractAddress: null,
-      chainId: 84532,
+      chainId: 31337,
       metadataStatus: "pending",
     },
   };

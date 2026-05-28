@@ -51,7 +51,7 @@ function normalizeScoreHash(value: string) {
 }
 
 function normalizeChainId(value: unknown) {
-  const chainId = Number(value ?? 84532);
+  const chainId = Number(value ?? 31337);
   if (!Number.isInteger(chainId) || chainId <= 0) {
     throw new Error(`chainId must be a positive integer, received: ${String(value)}`);
   }

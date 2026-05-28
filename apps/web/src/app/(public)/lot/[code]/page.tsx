@@ -159,7 +159,7 @@ function asSnapshot(value: unknown): CopernicusSnapshotView | null {
     era5: (asRecord(record.era5) ?? {}) as CopernicusSnapshotView["era5"],
     yieldPredict: (asRecord(record.yieldPredict) ?? {}) as CopernicusSnapshotView["yieldPredict"],
     scoreHash: String(record.scoreHash ?? ""),
-    chain: (asRecord(record.chain) ?? { chainId: 84532, metadataStatus: "pending" }) as CopernicusSnapshotView["chain"],
+    chain: (asRecord(record.chain) ?? { chainId: 31337, metadataStatus: "pending" }) as CopernicusSnapshotView["chain"],
   };
 }
 
@@ -178,6 +178,12 @@ function eudrLabel(status: CopernicusSnapshotView["eudrStatus"]) {
 
 function shortHash(hash: string) {
   return hash.length > 16 ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : hash;
+}
+
+function chainLabel(chainId: number) {
+  if (chainId === 31337) return "Hardhat local";
+  if (chainId === 84532) return "Base Sepolia";
+  return `Chain ${chainId}`;
 }
 
 function numberValue(value: unknown, fallback = 0) {
@@ -359,7 +365,7 @@ export default function PublicLotProofPage() {
               </div>
               <div className="mt-4 space-y-3 text-sm">
                 <ProofRow label="Score hash" value={shortHash(snapshot.scoreHash)} mono />
-                <ProofRow label="Chain" value={`Base Sepolia · ${snapshot.chain.chainId}`} />
+                <ProofRow label="Chain" value={`${chainLabel(snapshot.chain.chainId)} · ${snapshot.chain.chainId}`} />
                 <ProofRow label="Metadata" value={snapshot.chain.metadataStatus} />
                 <ProofRow label="Confidence" value={snapshot.dataQuality.confidence} />
                 <ProofRow label="Completeness" value={`${Math.round(snapshot.dataQuality.completeness * 100)}%`} />

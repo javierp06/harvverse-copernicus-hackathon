@@ -153,7 +153,7 @@
     },
     "warnings": [
       "Fixture mode: provider calls are not executed yet.",
-      "Base L2 metadata write is pending."
+      "Local contract metadata write is pending."
     ],
     "limitations": [
       "This deterministic demo snapshot is not a final financing decision.",
@@ -273,7 +273,7 @@
   "chain": {
     "transactionHash": null,
     "contractAddress": null,
-    "chainId": 84532,
+    "chainId": 31337,
     "metadataStatus": "pending"
   }
 }
