@@ -24,11 +24,17 @@ Already enough for parallel work:
 - Backend direction: `sourceMode` can be `fixture` first and `live` later.
 - Public QR route and webhook contract for frontend/n8n handoff.
 
+Javier-owned pieces now available:
+
+- Live Sentinel-2, Sentinel-1, DEM, ERA5, and preliminary EUDR continuity integrations.
+- Base L2 score metadata payload and local write script.
+- Smart-contract eligibility enforcement.
+- Chain proof verifier: `pnpm verify:copernicus-chain-proof`.
+
 Still Javier-owned:
 
-- Live Sentinel-2, Sentinel-1, DEM, ERA5, and EUDR integrations.
-- Base L2 write of score metadata.
-- Smart-contract eligibility enforcement.
+- Actual Base L2 testnet write when the team decides to use a live chain.
+- Official JRC forest baseline intersection if we go beyond the hackathon EUDR continuity screen.
 - Final endpoint names if they change.
 
 ## Jesus Can Start
@@ -81,7 +87,7 @@ Message rules:
 Example farmer message:
 
 ```text
-Harvverse Sentinel: tu lote HN-ZAFIRO-001 fue verificado con Copernicus.
+Harvverse Sentinel: tu lote HV-HN-ZAF-L02 fue verificado con Copernicus.
 Score: 85/100. EUDR: Verified.
 NDVI actual: 0.74. YieldPredict: 66.8-87 qq.
 Tu lote esta elegible para co-inversion.

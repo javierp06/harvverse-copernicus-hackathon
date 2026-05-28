@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "check-types": "turbo run check-types",
     "verify:dem": "node --import tsx scripts/verify-dem-live.ts",
+    "verify:copernicus-chain-proof": "node --import tsx scripts/build-copernicus-chain-proof.ts",
     "verify:copernicus-live": "node --import tsx scripts/verify-copernicus-live.ts",
     "verify:eudr": "node --import tsx scripts/verify-eudr-gate.ts",
     "verify:era5": "node --import tsx scripts/verify-era5-live.ts",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@harvverse-copernicus-hackathon/config": "workspace:*",
     "@types/node": "^22.13.14",
+    "ethers": "^6.16.0",
     "turbo": "^2.8.12",
     "typescript": "catalog:"
   },

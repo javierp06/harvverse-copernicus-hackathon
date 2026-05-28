@@ -46,7 +46,7 @@ const snapshot = await buildLiveCopernicusSnapshot(
   {
     id: sample.lotId,
     farmId: sample.farmId,
-    code: sample.lotCode ?? "HN-ZAFIRO-001",
+    code: sample.lotCode ?? "HV-HN-ZAF-L02",
     farmName: sample.farmName,
     region: sample.region,
     country: sample.country,

@@ -1,7 +1,7 @@
 {
   "lotId": 101,
   "farmId": 11,
-  "lotCode": "HN-ZAFIRO-001",
+  "lotCode": "HV-HN-ZAF-L02",
   "farmName": "Finca Zafiro",
   "region": "San Sebastian, La Paz",
   "country": "Honduras",
@@ -260,7 +260,7 @@
     "payload": {
       "lotId": 101,
       "farmId": 11,
-      "lotCode": "HN-ZAFIRO-001",
+      "lotCode": "HV-HN-ZAF-L02",
       "scoreVersion": "sentinel-v0.1.0",
       "riskScore": 85,
       "riskTier": "excellent",

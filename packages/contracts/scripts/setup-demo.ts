@@ -25,13 +25,41 @@ const DEMO_LOT = {
   priceCentsPerLb: 350,
   ticketCents: 342500,
   farmerShareBps: 6000,
-  copernicusRiskScore: 83,
-  eudrCompliant: true,
-  copernicusScoreVersion: "sentinel-live-v0.2.0",
 } as const;
+
+type CopernicusSnapshot = {
+  lotCode?: string;
+  riskScore: number;
+  eudrStatus: "verified" | "non_compliant" | "unknown";
+  scoreHash: string;
+  scoreVersion: string;
+};
+
+function readCopernicusSnapshot(): CopernicusSnapshot {
+  const snapshotPath = path.join(
+    __dirname,
+    "../../../.docs/sentinel/sample-copernicus-snapshot.json",
+  );
+  return JSON.parse(fs.readFileSync(snapshotPath, "utf8")) as CopernicusSnapshot;
+}
+
+function toBytes32Hash(hash: string) {
+  const normalized = hash.startsWith("0x") ? hash : `0x${hash}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) {
+    throw new Error(`scoreHash must be a 32-byte hex string, received: ${hash}`);
+  }
+  return normalized;
+}
 
 async function main() {
   const [deployer, demoPartner] = await ethers.getSigners();
+  const copernicusSnapshot = readCopernicusSnapshot();
+
+  if (copernicusSnapshot.lotCode && copernicusSnapshot.lotCode !== DEMO_LOT_CODE) {
+    throw new Error(
+      `Copernicus snapshot lotCode ${copernicusSnapshot.lotCode} does not match ${DEMO_LOT_CODE}`,
+    );
+  }
 
   console.log(`Network:          ${network.name}`);
   console.log(`Deployer:         ${deployer.address}`);
@@ -79,18 +107,15 @@ async function main() {
   );
   console.log(`Registered lot ${DEMO_LOT_CODE} on-chain (id: ${onchainLotId.slice(0, 10)}…)`);
 
-  const scoreHash = ethers.keccak256(
-    ethers.toUtf8Bytes(`${DEMO_LOT_CODE}:${DEMO_LOT.copernicusScoreVersion}:demo-copernicus-score`),
-  );
   await lotContract.updateCopernicusScore(
     onchainLotId,
-    DEMO_LOT.copernicusRiskScore,
-    DEMO_LOT.eudrCompliant,
-    scoreHash,
-    DEMO_LOT.copernicusScoreVersion,
+    copernicusSnapshot.riskScore,
+    copernicusSnapshot.eudrStatus === "verified",
+    toBytes32Hash(copernicusSnapshot.scoreHash),
+    copernicusSnapshot.scoreVersion,
   );
   console.log(
-    `Recorded Copernicus score ${DEMO_LOT.copernicusRiskScore}/100 and EUDR verified gate`,
+    `Recorded Copernicus score ${copernicusSnapshot.riskScore}/100 and EUDR ${copernicusSnapshot.eudrStatus}`,
   );
 
   // 4 — Mint 10,000 mock USDC to demo partner

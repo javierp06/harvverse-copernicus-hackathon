@@ -36,7 +36,7 @@ export async function GET() {
     example: {
       event: "score.calculated",
       lotId: 101,
-      lotCode: "HN-ZAFIRO-001",
+      lotCode: "HV-HN-ZAF-L02",
       recipient: {
         type: "farmer",
         phone: "+50400000000",
