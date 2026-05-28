@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -103,6 +103,27 @@ function resolveRepoRoot() {
   return cwd;
 }
 
+async function resolveHardhatBin(repoRoot: string, contractsDir: string) {
+  const executableName = process.platform === "win32" ? "hardhat.cmd" : "hardhat";
+  const candidates = [
+    path.join(contractsDir, "node_modules", ".bin", executableName),
+    path.join(repoRoot, "node_modules", ".bin", executableName),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error(
+    `Hardhat binary not found. Checked: ${candidates.join(", ")}`,
+  );
+}
+
 async function buildCopernicusSnapshotForLot(
   lot: LotForCopernicus,
   sourceMode: CopernicusSourceMode,
@@ -186,12 +207,7 @@ async function runLocalCopernicusVerifier(
 ): Promise<LocalChainProofResult> {
   const repoRoot = resolveRepoRoot();
   const contractsDir = path.join(repoRoot, "packages", "contracts");
-  const hardhatBin = path.join(
-    contractsDir,
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "hardhat.cmd" : "hardhat",
-  );
+  const hardhatBin = await resolveHardhatBin(repoRoot, contractsDir);
   const tempDir = await mkdtemp(path.join(tmpdir(), "harvverse-copernicus-"));
 
   try {
