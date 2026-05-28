@@ -54,7 +54,7 @@ Important UI rule:
 Expected labels:
 
 - `EUDR Verified`
-- `Risk Score 83/100`
+- `Risk Score 85/100`
 - `Sentinel-2 NDVI 0.74`
 - `YieldPredict 66.8-87 qq`
 - `Evidence hash`
@@ -82,7 +82,7 @@ Example farmer message:
 
 ```text
 Harvverse Sentinel: tu lote HN-ZAFIRO-001 fue verificado con Copernicus.
-Score: 83/100. EUDR: Verified.
+Score: 85/100. EUDR: Verified.
 NDVI actual: 0.74. YieldPredict: 66.8-87 qq.
 Tu lote esta elegible para co-inversion.
 ```
@@ -91,7 +91,7 @@ Example partner message:
 
 ```text
 Nuevo lote verificado por Copernicus: Finca Zafiro, Honduras.
-Risk Score: 83/100. EUDR Verified.
+Risk Score: 85/100. EUDR Verified.
 YieldPredict: 66.8-87 qq. Evidence hash disponible para Base L2.
 ```
 

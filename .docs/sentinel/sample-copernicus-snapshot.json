@@ -3,23 +3,23 @@
   "farmId": 11,
   "lotCode": "HN-ZAFIRO-001",
   "farmName": "Finca Zafiro",
-  "region": "Santa Barbara",
+  "region": "San Sebastian, La Paz",
   "country": "Honduras",
   "polygon": {
     "type": "Polygon",
     "coordinates": [
       [
-        [-88.23512, 14.92381],
-        [-88.23291, 14.92364],
-        [-88.23276, 14.92188],
-        [-88.23533, 14.92174],
-        [-88.23512, 14.92381]
+        [-87.961, 14.246],
+        [-87.959, 14.246],
+        [-87.959, 14.244],
+        [-87.961, 14.244],
+        [-87.961, 14.246]
       ]
     ]
   },
   "sourceMode": "fixture",
   "scoreVersion": "sentinel-v0.1.0",
-  "riskScore": 83,
+  "riskScore": 85,
   "riskTier": "excellent",
   "eudrStatus": "verified",
   "eligibleForInvestment": true,
@@ -75,7 +75,7 @@
     {
       "key": "polygon_terrain_suitability",
       "label": "Polygon altitude and area suitability",
-      "value": "1450 masl / 4.2 manzanas",
+      "value": "1310 masl / 4.2 manzanas",
       "score": 79,
       "weight": 15,
       "source": "polygon"
@@ -219,7 +219,7 @@
     "structuralChangeSignal": "none"
   },
   "dem": {
-    "altitudeMasl": 1450,
+    "altitudeMasl": 1310,
     "areaManzanas": 4.2,
     "terrainSuitability": "excellent"
   },
@@ -254,20 +254,20 @@
     "confidence": "high",
     "investmentArgument": "Stable Sentinel-2 canopy, verified EUDR status, balanced ERA5 rainfall, and suitable Copernicus DEM altitude support escrow-backed co-investment."
   },
-  "evidenceHash": "e8f4c5a6d7b80913d2e1f04799a8bc6457ac0d58eaa7c27cc45a711e92f3b680",
-  "scoreHash": "e8f4c5a6d7b80913d2e1f04799a8bc6457ac0d58eaa7c27cc45a711e92f3b680",
+  "evidenceHash": "75209eda0c1ff748f3c432cb5a0afa713719c8868614bfa579ae26c8ae53892f",
+  "scoreHash": "75209eda0c1ff748f3c432cb5a0afa713719c8868614bfa579ae26c8ae53892f",
   "signedPayload": {
     "payload": {
       "lotId": 101,
       "farmId": 11,
       "lotCode": "HN-ZAFIRO-001",
       "scoreVersion": "sentinel-v0.1.0",
-      "riskScore": 83,
+      "riskScore": 85,
       "riskTier": "excellent",
       "eudrStatus": "verified",
       "eligibleForInvestment": true
     },
-    "signature": "9a121c4654ff7c7c4ff1a7d0d28194c9f8f0c88e5b153372081c7c0b12d62a93",
+    "signature": "31e951f914bc910a9250be6db0b7ef55409172e0c81e6392c08a9067425e2a7f",
     "signer": "harvverse-sentinel-demo-signer"
   },
   "chain": {

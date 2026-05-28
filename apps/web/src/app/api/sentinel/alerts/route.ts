@@ -43,7 +43,7 @@ export async function GET() {
         name: "Demo Farmer",
       },
       snapshot: {
-        riskScore: 83,
+        riskScore: 85,
         eudrStatus: "verified",
         eligibleForInvestment: true,
       },
