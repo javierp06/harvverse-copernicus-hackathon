@@ -1,0 +1,150 @@
+/**
+ * Verifies the local Copernicus -> contract gate in one in-memory Hardhat run.
+ *
+ * It deploys contracts, creates the demo lot, writes the snapshot score, reads
+ * it back, and confirms HarvverseLot.isInvestmentEligible matches the snapshot.
+ */
+
+import { ethers, network } from "hardhat";
+import fs from "fs";
+import path from "path";
+
+const DEMO_LOT_CODE = "HV-HN-ZAF-L02";
+const DEMO_LOT = {
+  targetYieldTenthsQq: 600,
+  priceCentsPerLb: 350,
+  ticketCents: 342500,
+  farmerShareBps: 6000,
+} as const;
+
+type CopernicusSnapshot = {
+  lotCode?: string;
+  riskScore: number;
+  eudrStatus: "verified" | "non_compliant" | "unknown";
+  eligibleForInvestment: boolean;
+  scoreHash: string;
+  scoreVersion: string;
+  signedPayload?: {
+    payload?: {
+      lotCode?: string | null;
+    };
+  };
+};
+
+const repoRoot = path.resolve(__dirname, "../../..");
+
+function readJson<T>(filePath: string): T {
+  return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
+}
+
+function writeJsonIfRequested(value: unknown) {
+  const outputPath = process.env.OUTPUT_PATH;
+  if (!outputPath) return;
+
+  const resolvedPath = path.isAbsolute(outputPath)
+    ? outputPath
+    : path.resolve(repoRoot, outputPath);
+  fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+  fs.writeFileSync(resolvedPath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function resolveSnapshotPath() {
+  const snapshotPath = process.env.SNAPSHOT_PATH ?? ".docs/sentinel/sample-copernicus-snapshot.json";
+  return path.isAbsolute(snapshotPath)
+    ? snapshotPath
+    : path.resolve(repoRoot, snapshotPath);
+}
+
+function toBytes32Hash(hash: string) {
+  const normalized = hash.startsWith("0x") ? hash : `0x${hash}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) {
+    throw new Error(`scoreHash must be a 32-byte hex string, received: ${hash}`);
+  }
+  return normalized;
+}
+
+async function main() {
+  const snapshotPath = resolveSnapshotPath();
+  const snapshot = readJson<CopernicusSnapshot>(snapshotPath);
+  const lotCode =
+    process.env.LOT_CODE ??
+    snapshot.lotCode ??
+    snapshot.signedPayload?.payload?.lotCode ??
+    DEMO_LOT_CODE;
+
+  if (lotCode !== DEMO_LOT_CODE) {
+    throw new Error(`Local verifier expects ${DEMO_LOT_CODE}, received ${lotCode}`);
+  }
+
+  const [deployer] = await ethers.getSigners();
+  const chain = await ethers.provider.getNetwork();
+  const chainId = Number(chain.chainId);
+  const lotId = ethers.keccak256(ethers.toUtf8Bytes(lotCode));
+  const scoreHash = toBytes32Hash(snapshot.scoreHash);
+  const eudrCompliant = snapshot.eudrStatus === "verified";
+
+  const HarvverseLot = await ethers.getContractFactory("HarvverseLot");
+  const lotContract = await HarvverseLot.deploy(deployer.address);
+  await lotContract.waitForDeployment();
+  const lotAddress = await lotContract.getAddress();
+
+  await lotContract.createLot(
+    lotId,
+    deployer.address,
+    DEMO_LOT.targetYieldTenthsQq,
+    DEMO_LOT.priceCentsPerLb,
+    DEMO_LOT.ticketCents,
+    DEMO_LOT.farmerShareBps,
+  );
+
+  const tx = await lotContract.updateCopernicusScore(
+    lotId,
+    snapshot.riskScore,
+    eudrCompliant,
+    scoreHash,
+    snapshot.scoreVersion,
+  );
+  const receipt = await tx.wait();
+  const storedScore = await lotContract.getCopernicusScore(lotId);
+  const contractInvestmentEligible = await lotContract.isInvestmentEligible(lotId);
+  const expectedInvestmentEligible = snapshot.riskScore >= 60 && eudrCompliant;
+
+  const result = {
+    ok:
+      Number(storedScore.riskScore) === snapshot.riskScore &&
+      storedScore.eudrCompliant === eudrCompliant &&
+      storedScore.scoreHash === scoreHash &&
+      contractInvestmentEligible === expectedInvestmentEligible &&
+      snapshot.eligibleForInvestment === expectedInvestmentEligible,
+    network: network.name,
+    chainId,
+    snapshotPath: path.relative(repoRoot, snapshotPath),
+    contractAddress: lotAddress,
+    transactionHash: receipt?.hash ?? tx.hash,
+    lotCode,
+    lotId,
+    written: {
+      riskScore: Number(storedScore.riskScore),
+      eudrCompliant: storedScore.eudrCompliant,
+      scoreHash: storedScore.scoreHash,
+      scoreVersion: storedScore.scoreVersion,
+    },
+    gates: {
+      snapshotEligibleForInvestment: snapshot.eligibleForInvestment,
+      expectedInvestmentEligible,
+      contractInvestmentEligible,
+    },
+  };
+
+  writeJsonIfRequested(result);
+  console.log(JSON.stringify(result, null, 2));
+
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -13,6 +13,7 @@
     "verify:dem": "node --import tsx scripts/verify-dem-live.ts",
     "verify:copernicus-chain-proof": "node --import tsx scripts/build-copernicus-chain-proof.ts",
     "verify:copernicus-live": "node --import tsx scripts/verify-copernicus-live.ts",
+    "verify:copernicus-local-chain": "pnpm --filter @harvverse-copernicus-hackathon/contracts verify:copernicus-local-chain",
     "verify:eudr": "node --import tsx scripts/verify-eudr-gate.ts",
     "verify:era5": "node --import tsx scripts/verify-era5-live.ts",
     "verify:sentinel1": "node --import tsx scripts/verify-sentinel-1-live.ts",

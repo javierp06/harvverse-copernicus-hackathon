@@ -16,6 +16,11 @@ type Snapshot = {
     chainId?: number | string;
     metadataStatus?: string;
   };
+  signedPayload?: {
+    payload?: {
+      lotCode?: string | null;
+    };
+  };
 };
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -57,7 +62,8 @@ const snapshotPath = resolveRepoPath(
   process.env.SNAPSHOT_PATH ?? ".docs/sentinel/sample-copernicus-snapshot.json",
 );
 const snapshot = readJson<Snapshot>(snapshotPath);
-const lotCode = process.env.LOT_CODE ?? snapshot.lotCode;
+const lotCode =
+  process.env.LOT_CODE ?? snapshot.lotCode ?? snapshot.signedPayload?.payload?.lotCode ?? undefined;
 
 if (!lotCode) {
   throw new Error("LOT_CODE is required when the snapshot does not include lotCode.");
