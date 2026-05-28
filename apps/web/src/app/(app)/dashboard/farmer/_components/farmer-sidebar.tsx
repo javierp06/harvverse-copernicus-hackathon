@@ -4,7 +4,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard, Sprout, Plus, LogOut } from "lucide-react";
+import { DollarSign, Inbox, LayoutDashboard, LogOut, Plus, Settings, Sprout } from "lucide-react";
 
 import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
@@ -70,7 +70,6 @@ export default function FarmerSidebar({ isMobileOpen, onClose }: Props) {
           {t("my_farms")}
         </Button>
 
-        {/*
         <Button
           variant="ghost"
           className={navClasses(isActive("/dashboard/farmer/proposals", false))}
@@ -78,11 +77,6 @@ export default function FarmerSidebar({ isMobileOpen, onClose }: Props) {
         >
           <Inbox className="size-4" />
           {t("proposals")}
-          {pendingCount > 0 && (
-            <span className="ml-auto flex size-5 items-center justify-center rounded-full bg-yellow-500 text-xs font-bold text-black">
-              {pendingCount}
-            </span>
-          )}
         </Button>
 
         <Button
@@ -93,7 +87,6 @@ export default function FarmerSidebar({ isMobileOpen, onClose }: Props) {
           <DollarSign className="size-4" />
           {t("investments")}
         </Button>
-        */}
 
         <Button
           variant="ghost"
@@ -104,7 +97,6 @@ export default function FarmerSidebar({ isMobileOpen, onClose }: Props) {
           {t("create_farm")}
         </Button>
 
-        {/*
         <Button
           variant="ghost"
           className={navClasses(isActive("/settings"))}
@@ -113,7 +105,6 @@ export default function FarmerSidebar({ isMobileOpen, onClose }: Props) {
           <Settings className="size-4" />
           {t("settings")}
         </Button>
-        */}
       </nav>
 
       <div className="flex flex-col gap-3 border-t border-white/10 p-4">
