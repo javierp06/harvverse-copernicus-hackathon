@@ -4,7 +4,7 @@ import {
   fetchCopernicusDemElevation,
   summarizeCopernicusDem,
 } from "./copernicus/dem";
-import { buildEudrGate } from "./copernicus/eudr";
+import { buildEudrGateFromSentinel2 } from "./copernicus/eudr";
 import {
   centroidFromPolygon,
   fetchEra5ClimateMonths,
@@ -593,8 +593,17 @@ export async function buildLiveCopernicusSnapshot(
 
   const fixture = buildFixtureCopernicusSnapshot(lot);
   const climateCentroid = centroidFromPolygon(polygon);
+  const now = new Date();
+  const sentinelEvidenceEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    .toISOString()
+    .split("T")[0];
   const [ndviMonths, sarQuarters, climateMonths, demAltitude] = await Promise.all([
-    fetchSentinel2NdviMonths({ token, polygon }),
+    fetchSentinel2NdviMonths({
+      token,
+      polygon,
+      startDate: "2020-01-01",
+      endDate: sentinelEvidenceEnd,
+    }),
     fetchSentinel1SarQuarters({ token, polygon }),
     fetchEra5ClimateMonths({
       lat: climateCentroid.lat,
@@ -608,11 +617,12 @@ export async function buildLiveCopernicusSnapshot(
   const usableMonths = ndviMonths.filter(
     (month): month is typeof month & { ndvi: number } => month.ndvi != null,
   );
+  const scoreMonths = usableMonths.slice(-24);
   const usableSarQuarters = sarQuarters.filter(
     (quarter) => quarter.vv !== null && quarter.vh !== null,
   );
 
-  if (usableMonths.length === 0) {
+  if (scoreMonths.length === 0) {
     throw new Error("Sentinel-2 returned no usable NDVI observations for this polygon.");
   }
   if (usableSarQuarters.length === 0) {
@@ -625,24 +635,24 @@ export async function buildLiveCopernicusSnapshot(
   const sentinel1Summary = summarizeSentinel1SarQuarters(sarQuarters);
   const era5Summary = summarizeEra5ClimateMonths(climateMonths);
   const demSummary = summarizeCopernicusDem(demAltitude);
-  const eudrGate = buildEudrGate();
+  const eudrGate = buildEudrGateFromSentinel2(ndviMonths);
   const selfReportedAltitude = toNumber(lot.altitudeMasl);
   const altitudeDelta =
     selfReportedAltitude == null
       ? null
       : Math.abs(selfReportedAltitude - demSummary.altitudeMasl);
-  const currentNdvi = usableMonths.at(-1)?.ndvi ?? 0;
+  const currentNdvi = scoreMonths.at(-1)?.ndvi ?? 0;
   const twoYearAverageNdvi = Number(
     (
-      usableMonths.reduce((sum, month) => sum + month.ndvi, 0) /
-      usableMonths.length
+      scoreMonths.reduce((sum, month) => sum + month.ndvi, 0) /
+      scoreMonths.length
     ).toFixed(4),
   );
   const ndviAverageScore = Math.round(scoreNdviAverage(twoYearAverageNdvi));
   const ndviStabilityScore = Math.round(
-    scoreNdviStability(usableMonths.map((month) => month.ndvi)),
+    scoreNdviStability(scoreMonths.map((month) => month.ndvi)),
   );
-  const historicalSeries = usableMonths.map((month) => ({
+  const historicalSeries = scoreMonths.map((month) => ({
     month: month.month,
     ndvi: month.ndvi,
     validPixelCoverage: month.validPixelCoverage ?? 0,
@@ -758,9 +768,20 @@ export async function buildLiveCopernicusSnapshot(
             notes:
               "Live altitude uses Open-Meteo's Copernicus DEM GLO-90 elevation endpoint as a centroid fallback; direct CDSE DEM remains a future hardening path.",
           }
+      : source.key === "eudr"
+        ? {
+            ...source,
+            provider: "Copernicus Data Space Ecosystem / Sentinel Hub",
+            dataset: "sentinel-2-l2a",
+            mode: "live" as const,
+            dateRange: eudrGate.evidenceDateRange,
+            resolution: "10m",
+            notes:
+              "Live EUDR gate uses a preliminary Sentinel-2 post-2020 vegetation continuity screen; official JRC baseline intersection remains a future hardening path.",
+          }
       : source,
   );
-  const liveConfidence = usableMonths.length >= 18 ? "high" as const : "medium" as const;
+  const liveConfidence = scoreMonths.length >= 18 ? "high" as const : "medium" as const;
   const combinedLiveConfidence = lowerConfidence(
     lowerConfidence(
       lowerConfidence(liveConfidence, sentinel1Summary.confidence),
@@ -771,7 +792,7 @@ export async function buildLiveCopernicusSnapshot(
   const liveCompleteness = Number(
     Math.min(
       0.95,
-      (usableMonths.length / 24) * 0.55 +
+      (scoreMonths.length / 24) * 0.55 +
         (usableSarQuarters.length / 8) * 0.18 +
         (climateMonths.length / 24) * 0.22 +
         0.05,
@@ -782,7 +803,8 @@ export async function buildLiveCopernicusSnapshot(
     confidence: lowerConfidence(combinedLiveConfidence, parcelScale.confidence),
     completeness: liveCompleteness,
     warnings: [
-      "Sentinel-2 NDVI, Sentinel-1 SAR, ERA5 climate, and Copernicus DEM altitude are live; EUDR evidence is still pending.",
+      "Sentinel-2 NDVI, Sentinel-1 SAR, ERA5 climate, Copernicus DEM altitude, and Sentinel-2 EUDR continuity evidence are live.",
+      "EUDR uses a live Sentinel-2 continuity screen in this slice; official JRC baseline intersection is still pending.",
       "DEM altitude uses Open-Meteo's Copernicus DEM GLO-90 endpoint, not direct CDSE DEM.",
       ...(altitudeDelta != null && altitudeDelta > 300
         ? [`Stored altitude differs from DEM by ${Math.round(altitudeDelta)} masl; check the demo polygon or lot metadata.`]
@@ -808,6 +830,7 @@ export async function buildLiveCopernicusSnapshot(
     ...unsignedPayload,
     polygon: lot.polygon ?? null,
     sentinel2: historicalSeries,
+    eudrEvidence: ndviMonths,
     sentinel1: sarQuarters,
     era5: climateMonths,
     dem: {

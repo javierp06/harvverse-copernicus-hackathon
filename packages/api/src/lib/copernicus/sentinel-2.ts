@@ -14,6 +14,8 @@ export interface Sentinel2NdviMonth {
 export interface Sentinel2NdviRequest {
   token: string;
   months?: number;
+  startDate?: string;
+  endDate?: string;
   polygon?: Sentinel2Polygon | null;
   bbox?: [number, number, number, number];
 }
@@ -90,6 +92,8 @@ export function bboxFromPolygon(
 export async function fetchSentinel2NdviMonths({
   token,
   months = 24,
+  startDate,
+  endDate,
   polygon,
   bbox,
 }: Sentinel2NdviRequest): Promise<Sentinel2NdviMonth[]> {
@@ -102,6 +106,8 @@ export async function fetchSentinel2NdviMonths({
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const start = new Date(end);
   start.setUTCMonth(start.getUTCMonth() - months);
+  const resolvedStartDate = startDate ?? start.toISOString().split("T")[0];
+  const resolvedEndDate = endDate ?? end.toISOString().split("T")[0];
 
   const payload = {
     input: {
@@ -126,8 +132,8 @@ export async function fetchSentinel2NdviMonths({
     },
     aggregation: {
       timeRange: {
-        from: `${start.toISOString().split("T")[0]}T00:00:00Z`,
-        to: `${end.toISOString().split("T")[0]}T00:00:00Z`,
+        from: `${resolvedStartDate}T00:00:00Z`,
+        to: `${resolvedEndDate}T00:00:00Z`,
       },
       aggregationInterval: { of: "P1M" },
       evalscript: SENTINEL_2_NDVI_EVALSCRIPT,
