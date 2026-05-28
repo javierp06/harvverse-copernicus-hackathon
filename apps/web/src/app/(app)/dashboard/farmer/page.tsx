@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AlertCircle, CheckCircle2, Leaf, Plus, Sprout } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, FileText, Leaf, Plus, Sprout } from "lucide-react";
 
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
@@ -50,6 +50,15 @@ export default function FarmerDashboardPage() {
   const farmsToShow = farms ?? [];
   const firstName = user?.displayName?.split(" ")[0] ?? "";
   const verifiedFarmsCount = farmsToShow.filter((farm) => farm.verified).length;
+  const lotsCount = farmsToShow.reduce(
+    (sum, farm) => sum + (farm.lots?.length ?? 0),
+    0,
+  );
+  const availableLotsCount = farmsToShow.reduce(
+    (sum, farm) =>
+      sum + (farm.lots?.filter((lot) => lot.status === "available").length ?? 0),
+    0,
+  );
 
   if (!userLoading && user && user.role !== "farmer") {
     router.replace("/dashboard/player");
@@ -128,7 +137,7 @@ export default function FarmerDashboardPage() {
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 md:gap-4"
           >
             <motion.div variants={item}>
               <GlassCard className="border-primary/20 bg-white/[0.03] p-4 md:p-6 flex items-center md:flex-col md:text-center group hover:border-primary/40 transition-colors h-full gap-4 md:gap-0">
@@ -142,10 +151,29 @@ export default function FarmerDashboardPage() {
               </GlassCard>
             </motion.div>
 
-            {/*
-              Lot metrics are hidden for now while the onboarding objective is
-              farm registration.
-            */}
+            <motion.div variants={item}>
+              <GlassCard className="border-primary/20 bg-white/[0.03] p-4 md:p-6 flex items-center md:flex-col md:text-center group hover:border-primary/40 transition-colors h-full gap-4 md:gap-0">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center md:mb-4 group-hover:scale-110 transition-transform shrink-0">
+                  <Leaf className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                </div>
+                <div className="flex flex-col md:items-center flex-1">
+                  <p className="stat-label mb-0.5 md:mb-1 text-[10px] md:text-xs text-left md:text-center">{t("available_lots")}</p>
+                  <p className="stat-value text-2xl md:text-3xl text-left md:text-center leading-none">{availableLotsCount}</p>
+                </div>
+              </GlassCard>
+            </motion.div>
+
+            <motion.div variants={item}>
+              <GlassCard className="border-primary/20 bg-white/[0.03] p-4 md:p-6 flex items-center md:flex-col md:text-center group hover:border-primary/40 transition-colors h-full gap-4 md:gap-0">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg md:rounded-xl flex items-center justify-center md:mb-4 group-hover:scale-110 transition-transform shrink-0">
+                  <FileText className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                </div>
+                <div className="flex flex-col md:items-center flex-1">
+                  <p className="stat-label mb-0.5 md:mb-1 text-[10px] md:text-xs text-left md:text-center">{t("view_all_lots")}</p>
+                  <p className="stat-value text-2xl md:text-3xl text-left md:text-center leading-none">{lotsCount}</p>
+                </div>
+              </GlassCard>
+            </motion.div>
 
             <motion.div variants={item}>
               <GlassCard className="border-primary/20 bg-white/[0.03] p-4 md:p-6 flex items-center md:flex-col md:text-center group hover:border-primary/40 transition-colors h-full gap-4 md:gap-0">
@@ -159,8 +187,28 @@ export default function FarmerDashboardPage() {
               </GlassCard>
             </motion.div>
           </motion.div>
-          <div>
-            <h2 className="section-title mb-4 text-xl md:text-2xl">{t("my_farms")}</h2>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <h2 className="section-title text-xl md:text-2xl">{t("my_farms")}</h2>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="outline"
+                  className="border-primary/30 text-primary hover:bg-primary/10"
+                  onClick={() => router.push("/dashboard/farmer/my-farms")}
+                >
+                  {t("view_all_farms")}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-primary/30 text-primary hover:bg-primary/10"
+                  onClick={() => router.push("/dashboard/farmer/proposals")}
+                >
+                  {t("my_proposals")}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {farms.map((farm) => (
                 <FarmCard key={farm.id} farm={farm} />

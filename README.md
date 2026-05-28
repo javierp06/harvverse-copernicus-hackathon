@@ -156,6 +156,14 @@ NEXT_PUBLIC_USE_LOCAL_CONTRACTS=true
 NEXT_PUBLIC_HARDHAT_CHAIN_ID=31337
 NEXT_PUBLIC_USDC_ADDRESS=
 NEXT_PUBLIC_PARTNERSHIP_ADDRESS=
+
+# Copernicus provider credentials
+# Required for live Sentinel scoring; not needed for fixture/demo scoring.
+SENTINEL_HUB_CLIENT_ID=
+SENTINEL_HUB_CLIENT_SECRET=
+
+# Reserved for direct CDS ERA5 integration.
+CDS_API_KEY=
 ```
 
 ## Clerk Authentication

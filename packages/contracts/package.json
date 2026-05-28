@@ -10,7 +10,8 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
-    "setup:demo": "hardhat run scripts/setup-demo.ts --network hardhat"
+    "setup:demo": "hardhat run scripts/setup-demo.ts --network hardhat",
+    "write:copernicus-score": "hardhat run scripts/write-copernicus-score.ts --network hardhat"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

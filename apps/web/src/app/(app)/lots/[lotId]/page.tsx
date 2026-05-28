@@ -18,6 +18,8 @@ import {
   MapPin,
   Mountain,
   AlertCircle,
+  Ban,
+  Fingerprint,
   ShieldCheck,
   Sprout,
   XCircle,
@@ -133,6 +135,25 @@ function formatRelativeDate(value: Date | string | null | undefined) {
   return rtf.format(diffMinutes, "minute");
 }
 
+function scoreTone(score: number | null | undefined) {
+  if (score == null) return "border-white/10 bg-white/[0.03] text-white/45";
+  if (score >= 80) return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+  if (score >= 60) return "border-lime-400/30 bg-lime-400/10 text-lime-300";
+  if (score >= 40) return "border-yellow-400/30 bg-yellow-400/10 text-yellow-300";
+  return "border-red-400/30 bg-red-400/10 text-red-300";
+}
+
+function eudrLabel(status: string | null | undefined) {
+  if (status === "verified") return "EUDR Verified";
+  if (status === "non_compliant") return "EUDR Non-Compliant";
+  return "EUDR Pending Review";
+}
+
+function shortHash(hash: string | null | undefined) {
+  if (!hash) return "Pending";
+  return hash.length > 18 ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : hash;
+}
+
 export default function LotDetailPage() {
   const router = useRouter();
   const params = useParams<{ lotId: string }>();
@@ -169,6 +190,8 @@ export default function LotDetailPage() {
 
   const activePlan = lot?.plans.find((p) => p.status !== "revoked") ?? null;
   const projections = activePlan ? computeProjections(activePlan) : null;
+  const copernicusSnapshot = lot?.copernicusSnapshot ?? null;
+  const copernicusEligible = copernicusSnapshot?.eligibleForInvestment === true;
 
   const reserve = useReservePartnership({
     lot: lot ?? null,
@@ -194,7 +217,8 @@ export default function LotDetailPage() {
     !!activePlan &&
     lot?.status === "available" &&
     isPartner &&
-    !lotProposal;
+    !lotProposal &&
+    copernicusEligible;
 
   const si = stepIndex(reserve.step);
 
@@ -265,6 +289,16 @@ export default function LotDetailPage() {
         <Button className="bg-primary/50 text-[#001020] font-bold py-6 px-8" disabled>
           <HandCoins className="w-5 h-5 mr-2" />
           {t("lot_status", { status: lot?.status ?? "" })}
+        </Button>
+      );
+    }
+
+    if (!copernicusEligible) {
+      const blockedByEudr = copernicusSnapshot?.eudrStatus === "non_compliant";
+      return (
+        <Button className="bg-red-500/15 border border-red-500/30 text-red-300 font-bold py-6 px-8 cursor-default" disabled>
+          {blockedByEudr ? <Ban className="w-5 h-5 mr-2" /> : <ShieldCheck className="w-5 h-5 mr-2" />}
+          {copernicusSnapshot ? "Satellite score not eligible" : "Satellite score pending"}
         </Button>
       );
     }
@@ -518,6 +552,69 @@ export default function LotDetailPage() {
                 </dl>
               ) : (
                 <p className="text-white/40 text-sm italic">{t("no_active_plan")}</p>
+              )}
+            </GlassCard>
+
+            <GlassCard className="p-6 md:p-8 border-primary/20">
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
+                    Copernicus
+                  </p>
+                  <h2 className="mt-1 font-trenda text-lg font-bold text-white">
+                    Satellite Verification
+                  </h2>
+                </div>
+                <Badge className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${scoreTone(copernicusSnapshot?.riskScore)}`}>
+                  {copernicusSnapshot?.sourceMode ?? "pending"}
+                </Badge>
+              </div>
+
+              {copernicusSnapshot ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className={`rounded-lg border p-3 ${scoreTone(copernicusSnapshot.riskScore)}`}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Risk Score</p>
+                      <p className="mt-1 text-3xl font-black">
+                        {copernicusSnapshot.riskScore}
+                        <span className="text-sm opacity-60">/100</span>
+                      </p>
+                    </div>
+                    <div className={`rounded-lg border p-3 ${copernicusEligible ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-red-400/30 bg-red-400/10 text-red-300"}`}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                        Contract Gate
+                      </p>
+                      <p className="mt-2 text-sm font-black">
+                        {copernicusEligible ? "Eligible" : "Blocked"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                      <span className="text-white/45">EUDR</span>
+                      <span className="font-bold text-white">{eudrLabel(copernicusSnapshot.eudrStatus)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                      <span className="text-white/45">Version</span>
+                      <span className="font-mono text-xs text-primary">{copernicusSnapshot.scoreVersion}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
+                      <span className="flex items-center gap-1 text-white/45">
+                        <Fingerprint className="h-3.5 w-3.5" />
+                        Hash
+                      </span>
+                      <span className="font-mono text-xs text-primary">{shortHash(copernicusSnapshot.scoreHash)}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-yellow-400/20 bg-yellow-400/10 p-4">
+                  <p className="text-sm font-bold text-yellow-200">Satellite score pending</p>
+                  <p className="mt-1 text-xs leading-5 text-yellow-100/65">
+                    The lot must have a Copernicus snapshot before on-chain investment can open.
+                  </p>
+                </div>
               )}
             </GlassCard>
           </div>

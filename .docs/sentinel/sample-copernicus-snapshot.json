@@ -157,8 +157,17 @@
     ],
     "limitations": [
       "This deterministic demo snapshot is not a final financing decision.",
-      "EUDR status must be re-computed from live land-cover evidence before production use."
-    ]
+      "EUDR status must be re-computed from live land-cover evidence before production use.",
+      "Sentinel-1 IW GRD is treated as a contextual proxy for small lots, not a precise parcel-level soil moisture measurement."
+    ],
+    "parcelScale": {
+      "areaManzanas": 4.2,
+      "areaHectares": 2.94,
+      "sentinel2PixelEstimate": 294,
+      "sentinel1IwCellEstimate": 18.3,
+      "confidence": "high",
+      "warning": null
+    }
   },
   "sentinel2": {
     "currentNdvi": 0.74,

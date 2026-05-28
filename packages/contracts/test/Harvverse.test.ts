@@ -40,6 +40,8 @@ describe("Harvverse — Finca Zafiro happy path", function () {
   const LOT_ID = ethers.keccak256(ethers.toUtf8Bytes("finca-zafiro-lot-1"));
   const PARTNERSHIP_ID = ethers.keccak256(ethers.toUtf8Bytes("finca-zafiro-partnership-1"));
   const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
+  const SCORE_HASH = ethers.keccak256(ethers.toUtf8Bytes("finca-zafiro-copernicus-score-v1"));
+  const SCORE_VERSION = "sentinel-live-v0.2.0";
 
   before(async function () {
     [admin, farmer, partner] = await ethers.getSigners();
@@ -85,6 +87,73 @@ describe("Harvverse — Finca Zafiro happy path", function () {
     expect(lot.farmer).to.equal(farmer.address);
     expect(lot.ticketCents).to.equal(TICKET_CENTS);
     expect(lot.status).to.equal(0n); // LotStatus.Created
+  });
+
+  it("admin records Copernicus score metadata for the lot", async function () {
+    expect(await lotContract.isInvestmentEligible(LOT_ID)).to.equal(false);
+
+    await expect(
+      lotContract
+        .connect(admin)
+        .updateCopernicusScore(LOT_ID, 83, true, SCORE_HASH, SCORE_VERSION)
+    )
+      .to.emit(lotContract, "CopernicusScoreUpdated")
+      .withArgs(LOT_ID, 83, true, SCORE_HASH, SCORE_VERSION);
+
+    const score = await lotContract.getCopernicusScore(LOT_ID);
+    expect(score.riskScore).to.equal(83n);
+    expect(score.eudrCompliant).to.equal(true);
+    expect(score.scoreHash).to.equal(SCORE_HASH);
+    expect(score.scoreVersion).to.equal(SCORE_VERSION);
+    expect(await lotContract.isInvestmentEligible(LOT_ID)).to.equal(true);
+  });
+
+  it("Copernicus eligibility requires score >= 60 and EUDR compliance", async function () {
+    const lowScoreLotId = ethers.keccak256(ethers.toUtf8Bytes("low-score-lot"));
+    const eudrBlockedLotId = ethers.keccak256(ethers.toUtf8Bytes("eudr-blocked-lot"));
+
+    await lotContract
+      .connect(admin)
+      .createLot(lowScoreLotId, farmer.address, 100, 300, 100_000, 6_000);
+    await lotContract
+      .connect(admin)
+      .updateCopernicusScore(lowScoreLotId, 39, true, SCORE_HASH, SCORE_VERSION);
+    expect(await lotContract.isInvestmentEligible(lowScoreLotId)).to.equal(false);
+
+    await lotContract
+      .connect(admin)
+      .createLot(eudrBlockedLotId, farmer.address, 100, 300, 100_000, 6_000);
+    await lotContract
+      .connect(admin)
+      .updateCopernicusScore(eudrBlockedLotId, 80, false, SCORE_HASH, SCORE_VERSION);
+    expect(await lotContract.isInvestmentEligible(eudrBlockedLotId)).to.equal(false);
+  });
+
+  it("rejects invalid Copernicus score metadata", async function () {
+    await expect(
+      lotContract
+        .connect(admin)
+        .updateCopernicusScore(LOT_ID, 101, true, SCORE_HASH, SCORE_VERSION)
+    ).to.be.revertedWith("Score exceeds 100");
+
+    await expect(
+      lotContract
+        .connect(admin)
+        .updateCopernicusScore(LOT_ID, 83, true, ethers.ZeroHash, SCORE_VERSION)
+    ).to.be.revertedWith("Score hash required");
+  });
+
+  it("blocks investment before Copernicus eligibility is verified", async function () {
+    const unverifiedLotId = ethers.keccak256(ethers.toUtf8Bytes("unverified-lot"));
+    const unverifiedPartnershipId = ethers.keccak256(ethers.toUtf8Bytes("unverified-partnership"));
+
+    await lotContract
+      .connect(admin)
+      .createLot(unverifiedLotId, farmer.address, 100, 300, 100_000, 6_000);
+
+    await expect(
+      partnership.connect(partner).invest(unverifiedPartnershipId, unverifiedLotId, 100_000)
+    ).to.be.revertedWith("Lot not Copernicus eligible");
   });
 
   it("partner invests — escrow receives USDC and lot moves to Funded", async function () {
@@ -191,6 +260,9 @@ describe("Harvverse — Finca Zafiro happy path", function () {
     await lotContract
       .connect(admin)
       .createLot(cancelLotId, farmer.address, 100, 300, smallTicket, 6_000);
+    await lotContract
+      .connect(admin)
+      .updateCopernicusScore(cancelLotId, 72, true, SCORE_HASH, SCORE_VERSION);
 
     await partnership.connect(secondPartner!).invest(cancelPartnershipId, cancelLotId, smallTicket);
 

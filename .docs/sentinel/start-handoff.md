@@ -19,6 +19,7 @@ The real backend should keep the same field names while Javier replaces fixture 
 Already enough for parallel work:
 
 - Snapshot shape with score, EUDR, seven variables, YieldPredict, source provenance, data quality, hash, and chain fields.
+- Parcel-scale confidence is included so small lots can show Sentinel-2/Sentinel-1 limitations honestly.
 - Fixture payload for one realistic Honduran coffee lot.
 - Backend direction: `sourceMode` can be `fixture` first and `live` later.
 - Public QR route and webhook contract for frontend/n8n handoff.
