@@ -39,12 +39,12 @@ export function summarizeCopernicusDem(altitudeMasl: number): CopernicusDemSumma
   return {
     altitudeMasl,
     terrainSuitability:
-      altitudeMasl >= 1200 && altitudeMasl <= 1800
+      altitudeMasl >= 1200 && altitudeMasl <= 1900
         ? "excellent"
-        : altitudeMasl >= 900 && altitudeMasl <= 2200
+        : altitudeMasl >= 900 && altitudeMasl <= 2400
           ? "good"
           : "moderate",
-    terrainRisk: altitudeMasl < 600 || altitudeMasl > 2200 ? "medium" : "low",
+    terrainRisk: altitudeMasl < 600 || altitudeMasl > 2400 ? "medium" : "low",
     confidence: "low",
     provider: "open_meteo_copernicus_dem_glo90",
     limitations: [

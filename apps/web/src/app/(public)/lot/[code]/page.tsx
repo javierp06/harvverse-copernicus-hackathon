@@ -108,6 +108,16 @@ type CopernicusSnapshotView = {
     highBandQuintales: number;
     confidence: string;
     investmentArgument: string;
+    baseYieldQqPerManzana?: number;
+    altitudeBand?: string;
+    ndviMaySepAuc?: number | null;
+    ndviBenchmarkAuc?: number;
+    ndviModifier?: number;
+    floweringPeakNdvi?: number | null;
+    densityModifier?: number;
+    plantsPerManzana?: number | null;
+    expectedPlantsPerManzana?: number;
+    formula?: string;
   };
   scoreHash: string;
   chain: {
@@ -358,6 +368,46 @@ export default function PublicLotProofPage() {
                 <Metric label="Projected" value={`${snapshot.yieldPredict.projectedQuintales} qq`} />
                 <Metric label="Low band" value={`${snapshot.yieldPredict.lowBandQuintales} qq`} />
                 <Metric label="High band" value={`${snapshot.yieldPredict.highBandQuintales} qq`} />
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {snapshot.yieldPredict.baseYieldQqPerManzana != null ? (
+                  <Metric
+                    label="Base yield"
+                    value={`${snapshot.yieldPredict.baseYieldQqPerManzana} qq/mz`}
+                  />
+                ) : null}
+                {snapshot.yieldPredict.ndviModifier != null ? (
+                  <Metric
+                    label="NDVI modifier"
+                    value={`${snapshot.yieldPredict.ndviModifier}x`}
+                  />
+                ) : null}
+                {snapshot.yieldPredict.densityModifier != null ? (
+                  <Metric
+                    label="Density modifier"
+                    value={`${snapshot.yieldPredict.densityModifier}x`}
+                  />
+                ) : null}
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {snapshot.yieldPredict.ndviMaySepAuc != null ? (
+                  <Metric
+                    label="May-Sep NDVI AUC"
+                    value={`${snapshot.yieldPredict.ndviMaySepAuc}`}
+                  />
+                ) : null}
+                {snapshot.yieldPredict.floweringPeakNdvi != null ? (
+                  <Metric
+                    label="Flowering peak NDVI"
+                    value={`${snapshot.yieldPredict.floweringPeakNdvi}`}
+                  />
+                ) : null}
+                {snapshot.yieldPredict.plantsPerManzana != null ? (
+                  <Metric
+                    label="Plant density"
+                    value={`${snapshot.yieldPredict.plantsPerManzana}/mz`}
+                  />
+                ) : null}
               </div>
             </GlassCard>
 

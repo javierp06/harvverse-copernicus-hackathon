@@ -150,6 +150,16 @@ export interface CopernicusLotSnapshot {
     highBandQuintales: number;
     confidence: "medium" | "high";
     investmentArgument: string;
+    baseYieldQqPerManzana: number;
+    altitudeBand: "low" | "optimal" | "high" | "very_high" | "extreme";
+    ndviMaySepAuc: number | null;
+    ndviBenchmarkAuc: number;
+    ndviModifier: number;
+    floweringPeakNdvi: number | null;
+    densityModifier: number;
+    plantsPerManzana: number | null;
+    expectedPlantsPerManzana: number;
+    formula: string;
   };
   evidenceHash: string;
   scoreHash: string;
@@ -176,6 +186,7 @@ interface SnapshotLotInput {
   farmName: string;
   region: string;
   country: string;
+  variety?: string | null;
   altitudeMasl?: number | null;
   areaManzanas?: string | number | null;
   gpsLat?: string | number | null;
@@ -185,8 +196,8 @@ interface SnapshotLotInput {
   harvestYear?: number | null;
 }
 
-const SCORE_VERSION = "sentinel-v0.1.0";
-const LIVE_SCORE_VERSION = "sentinel-live-v0.2.0";
+const SCORE_VERSION = "sentinel-v0.2.0";
+const LIVE_SCORE_VERSION = "sentinel-live-v0.3.0";
 const DEMO_SIGNER = "harvverse-sentinel-demo-signer";
 const LIVE_SIGNER = "harvverse-sentinel-worker";
 const HECTARES_PER_MANZANA = 0.6989;
@@ -333,6 +344,10 @@ function lerp(value: number, inMin: number, inMax: number, outMin: number, outMa
   return outMin + ratio * (outMax - outMin);
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function weightedScore(variables: SentinelScoreVariable[]): number {
   return Math.round(
     variables.reduce((sum, variable) => sum + variable.score * variable.weight, 0) /
@@ -377,6 +392,175 @@ function buildParcelScaleQuality(areaManzanas: number | null) {
       : isSmallLot
         ? "Small parcel: Sentinel signals should be interpreted with polygon accuracy and field context."
         : null,
+  };
+}
+
+type AltitudeYieldBand = "low" | "optimal" | "high" | "very_high" | "extreme";
+type NdviYieldPoint = { month: string; ndvi: number };
+
+const BASE_YIELD_QQ_PER_MANZANA: Record<
+  string,
+  Record<AltitudeYieldBand, number>
+> = {
+  bourbon: { low: 14, optimal: 19, high: 17, very_high: 15, extreme: 12 },
+  catuai: { low: 16, optimal: 22, high: 19, very_high: 16, extreme: 13 },
+  caturra: { low: 15, optimal: 20, high: 17, very_high: 15, extreme: 12 },
+  geisha: { low: 10, optimal: 14, high: 13, very_high: 11, extreme: 9 },
+  pacamara: { low: 13, optimal: 18, high: 16, very_high: 14, extreme: 11 },
+  parainema: { low: 16, optimal: 21, high: 18, very_high: 15, extreme: 12 },
+  typica: { low: 12, optimal: 16, high: 14, very_high: 12, extreme: 10 },
+  default: { low: 14, optimal: 18.5, high: 16.5, very_high: 14.5, extreme: 12 },
+};
+
+function normalizeVariety(value: string | null | undefined) {
+  const normalized = value?.toLowerCase().trim() ?? "";
+  if (normalized.includes("bourbon")) return "bourbon";
+  if (normalized.includes("catuai") || normalized.includes("catuaí")) return "catuai";
+  if (normalized.includes("caturra")) return "caturra";
+  if (normalized.includes("geisha") || normalized.includes("gesha")) return "geisha";
+  if (normalized.includes("pacamara")) return "pacamara";
+  if (normalized.includes("parainema")) return "parainema";
+  if (normalized.includes("typica") || normalized.includes("típica")) return "typica";
+  return "default";
+}
+
+function altitudeYieldBand(altitudeMasl: number): AltitudeYieldBand {
+  if (altitudeMasl < 900) return "low";
+  if (altitudeMasl <= 1600) return "optimal";
+  if (altitudeMasl <= 2200) return "high";
+  if (altitudeMasl <= 2400) return "very_high";
+  return "extreme";
+}
+
+function ndviBenchmarkAucForAltitude(band: AltitudeYieldBand) {
+  if (band === "low") return 3.25;
+  if (band === "optimal") return 3.45;
+  if (band === "high") return 3.35;
+  if (band === "very_high") return 3.15;
+  return 3.0;
+}
+
+function monthParts(value: string) {
+  const [yearText, monthText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) return null;
+  if (month < 1 || month > 12) return null;
+  return { year, month };
+}
+
+function latestMaySepAuc(points: NdviYieldPoint[]) {
+  const byYear = new Map<number, number[]>();
+
+  for (const point of points) {
+    const parts = monthParts(point.month);
+    if (!parts || parts.month < 5 || parts.month > 9) continue;
+
+    const months = byYear.get(parts.year) ?? [];
+    months.push(point.ndvi);
+    byYear.set(parts.year, months);
+  }
+
+  const years = [...byYear.keys()].sort((a, b) => b - a);
+  for (const year of years) {
+    const values = byYear.get(year) ?? [];
+    if (values.length < 3) continue;
+
+    const normalizedFiveMonthAuc =
+      values.reduce((sum, value) => sum + value, 0) * (5 / values.length);
+    return {
+      year,
+      observedMonths: values.length,
+      auc: Number(normalizedFiveMonthAuc.toFixed(3)),
+    };
+  }
+
+  return null;
+}
+
+function floweringPeakNdvi(points: NdviYieldPoint[], preferredYear: number | null) {
+  const candidates = points
+    .filter((point) => {
+      const parts = monthParts(point.month);
+      if (!parts || (parts.month !== 3 && parts.month !== 4)) return false;
+      return preferredYear == null || parts.year === preferredYear;
+    })
+    .map((point) => point.ndvi);
+
+  if (candidates.length === 0 && preferredYear != null) {
+    return floweringPeakNdvi(points, null);
+  }
+  if (candidates.length === 0) return null;
+
+  return Number(Math.max(...candidates).toFixed(3));
+}
+
+function expectedPlantsPerManzana(altitudeBand: AltitudeYieldBand) {
+  if (altitudeBand === "very_high" || altitudeBand === "extreme") return 1600;
+  return 1800;
+}
+
+function buildYieldPredict({
+  lot,
+  areaManzanas,
+  altitudeMasl,
+  ndviSeries,
+  sourceMode,
+}: {
+  lot: SnapshotLotInput;
+  areaManzanas: number;
+  altitudeMasl: number;
+  ndviSeries: NdviYieldPoint[];
+  sourceMode: CopernicusSourceMode;
+}): CopernicusLotSnapshot["yieldPredict"] {
+  const varietyKey = normalizeVariety(lot.variety);
+  const altitudeBand = altitudeYieldBand(altitudeMasl);
+  const baseYieldQqPerManzana =
+    BASE_YIELD_QQ_PER_MANZANA[varietyKey]?.[altitudeBand] ??
+    BASE_YIELD_QQ_PER_MANZANA.default[altitudeBand];
+  const season = latestMaySepAuc(ndviSeries);
+  const ndviBenchmarkAuc = ndviBenchmarkAucForAltitude(altitudeBand);
+  const ndviModifier =
+    season == null
+      ? 1
+      : Number(clamp(season.auc / ndviBenchmarkAuc, 0.7, 1.25).toFixed(2));
+  const expectedPlants = expectedPlantsPerManzana(altitudeBand);
+  const plantsPerManzana =
+    lot.numTrees != null && areaManzanas > 0
+      ? Number((lot.numTrees / areaManzanas).toFixed(0))
+      : null;
+  const densityModifier =
+    plantsPerManzana == null
+      ? 1
+      : Number(clamp(plantsPerManzana / expectedPlants, 0.75, 1.15).toFixed(2));
+  const projectedQuintales = Number(
+    (areaManzanas * baseYieldQqPerManzana * ndviModifier * densityModifier).toFixed(1),
+  );
+  const floweringPeak = floweringPeakNdvi(ndviSeries, season?.year ?? null);
+
+  return {
+    projectedQuintales,
+    lowBandQuintales: Number((projectedQuintales * 0.8).toFixed(1)),
+    highBandQuintales: Number((projectedQuintales * 1.2).toFixed(1)),
+    confidence:
+      sourceMode === "live" && season != null && plantsPerManzana != null
+        ? "high"
+        : "medium",
+    investmentArgument:
+      `YieldPredict uses ${areaManzanas.toFixed(2)} mz × ${baseYieldQqPerManzana.toFixed(1)} qq/mz ` +
+      `(${varietyKey}/${altitudeBand}) × NDVI May-Sep ${ndviModifier.toFixed(2)}x ` +
+      `× density ${densityModifier.toFixed(2)}x to estimate the next harvest.`,
+    baseYieldQqPerManzana,
+    altitudeBand,
+    ndviMaySepAuc: season?.auc ?? null,
+    ndviBenchmarkAuc,
+    ndviModifier,
+    floweringPeakNdvi: floweringPeak,
+    densityModifier,
+    plantsPerManzana,
+    expectedPlantsPerManzana: expectedPlants,
+    formula:
+      "area_mz * base_yield_qq_per_mz(variety+altitude) * ndvi_may_sep_auc_modifier * plant_density_modifier",
   };
 }
 
@@ -472,7 +656,14 @@ export function buildFixtureCopernicusSnapshot(
   );
   const riskTier = riskTierFor(riskScore);
   const eligibleForInvestment = eudrStatus === "verified" && riskScore >= 60;
-  const projectedQuintales = Number((areaManzanas * 18.5).toFixed(1));
+  const demSummary = summarizeCopernicusDem(altitudeMasl);
+  const yieldPredict = buildYieldPredict({
+    lot,
+    areaManzanas,
+    altitudeMasl,
+    ndviSeries,
+    sourceMode: "fixture",
+  });
   const evidenceTo = "2026-05-26";
   const sources: CopernicusSourceMetadata[] = [
     {
@@ -554,6 +745,7 @@ export function buildFixtureCopernicusSnapshot(
     variables,
     sources,
     dataQuality,
+    yieldPredict,
   };
   const evidenceHash = hashJson({
     ...unsignedPayload,
@@ -597,7 +789,7 @@ export function buildFixtureCopernicusSnapshot(
     dem: {
       altitudeMasl,
       areaManzanas,
-      terrainSuitability: altitudeMasl >= 1100 ? "excellent" : "good",
+      terrainSuitability: demSummary.terrainSuitability,
     },
     era5: {
       annualRainfallMm,
@@ -623,14 +815,7 @@ export function buildFixtureCopernicusSnapshot(
         to: evidenceTo,
       },
     },
-    yieldPredict: {
-      projectedQuintales,
-      lowBandQuintales: Number((projectedQuintales * 0.86).toFixed(1)),
-      highBandQuintales: Number((projectedQuintales * 1.12).toFixed(1)),
-      confidence: "high",
-      investmentArgument:
-        "Stable canopy, compliant EUDR signal, and balanced rainfall support escrow-backed co-investment.",
-    },
+    yieldPredict,
     evidenceHash,
     scoreHash: evidenceHash,
     signedPayload: {
@@ -736,6 +921,13 @@ export async function buildLiveCopernicusSnapshot(
     validPixelCoverage: month.validPixelCoverage ?? 0,
     cloudCoverage: month.cloudCoverage ?? 0,
   }));
+  const yieldPredict = buildYieldPredict({
+    lot,
+    areaManzanas: fixture.dem.areaManzanas ?? toNumber(lot.areaManzanas) ?? 2.4,
+    altitudeMasl: demSummary.altitudeMasl,
+    ndviSeries: historicalSeries,
+    sourceMode: "live",
+  });
   const variables = fixture.variables.map((variable) => {
     if (variable.key === "sentinel2_current_ndvi") {
       return {
@@ -904,6 +1096,7 @@ export async function buildLiveCopernicusSnapshot(
     variables,
     sources,
     dataQuality,
+    yieldPredict,
   };
   const evidenceHash = hashJson({
     ...unsignedPayload,
@@ -984,6 +1177,7 @@ export async function buildLiveCopernicusSnapshot(
       ],
       evidenceDateRange: eudrGate.evidenceDateRange,
     },
+    yieldPredict,
     evidenceHash,
     scoreHash: evidenceHash,
     signedPayload: {
