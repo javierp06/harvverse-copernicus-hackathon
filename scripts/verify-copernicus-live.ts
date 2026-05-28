@@ -70,8 +70,13 @@ const summary = {
   sourceModes,
   sentinel2Months: snapshot.sentinel2.historicalSeries.length,
   sentinel2CurrentNdvi: snapshot.sentinel2.currentNdvi,
+  sentinel2CurrentNdre: snapshot.sentinel2.currentNdre,
+  sentinel2CurrentNdwi: snapshot.sentinel2.currentNdwi,
+  sentinel2CurrentMsi: snapshot.sentinel2.currentMsi,
   sentinel1MoistureProxy: snapshot.sentinel1.moistureProxy,
   sentinel1StructuralChangeSignal: snapshot.sentinel1.structuralChangeSignal,
+  sentinel1VhVvRatio: snapshot.sentinel1.vhVvRatio,
+  sentinel1RadarVegetationIndex: snapshot.sentinel1.radarVegetationIndex,
   annualRainfallMm: snapshot.era5.annualRainfallMm,
   meanTemperatureC: snapshot.era5.meanTemperatureC,
   altitudeMasl: snapshot.dem.altitudeMasl,
@@ -98,6 +103,11 @@ const failed =
   snapshot.riskScore < 0 ||
   snapshot.riskScore > 100 ||
   snapshot.sentinel2.historicalSeries.length === 0 ||
+  snapshot.sentinel2.currentNdre == null ||
+  snapshot.sentinel2.currentNdwi == null ||
+  snapshot.sentinel2.currentMsi == null ||
+  snapshot.sentinel1.vhVvRatio == null ||
+  snapshot.sentinel1.radarVegetationIndex == null ||
   snapshot.scoreHash.length !== 64 ||
   snapshot.evidenceHash !== snapshot.scoreHash;
 
