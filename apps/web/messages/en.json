@@ -208,7 +208,7 @@
     "outside_farm_warning": "Some lot corners seem to be outside the farm boundary. Please verify the polygon.",
     "investment_preview": "Investment Preview (for {area} manzanas)",
     "lot_boundary_with_farm": "Lot Boundary (blue = farm boundary)",
-    "lot_boundary": "Lot Boundary (optional)",
+    "lot_boundary": "Lot Boundary",
     "polygon_guide_title": "How to create your lot boundary?",
     "polygon_guide_app": "Google Earth",
     "polygon_guide_step1": "Download Google Earth on your phone",
@@ -330,7 +330,9 @@
     "s1_vh_vv_rvi": "S1 VH/VV · RVI",
     "era5_rainfall": "ERA5 rainfall",
     "score_version": "Score version",
-    "unit_mm_year": "mm/year"
+    "unit_mm_year": "mm/year",
+    "unit_masl": "masl",
+    "unit_mzn": "mz"
   },
   "partnership": {
     "confirm_investment": "Confirm Investment",

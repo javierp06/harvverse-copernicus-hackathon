@@ -9,13 +9,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, CheckCircle, HelpCircle, Info, Lock, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, HelpCircle, Info, Lock, Loader2, ImagePlus } from "lucide-react";
 
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
 import { Input } from "@harvverse-copernicus-hackathon/ui/components/input";
 import { Textarea } from "@harvverse-copernicus-hackathon/ui/components/textarea";
 import { Skeleton } from "@harvverse-copernicus-hackathon/ui/components/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@harvverse-copernicus-hackathon/ui/components/select";
 import {
   Form,
   FormControl,
@@ -60,6 +67,10 @@ type EditLotInput = z.input<typeof editLotSchema>;
 type EditLotValues = z.output<typeof editLotSchema>;
 
 const inputClasses = "bg-black/20 border-white/10 text-white placeholder:text-gray-600";
+
+const COFFEE_VARIETIES = [
+  "Geisha", "Bourbon", "Catuai", "Pacamara", "Typica", "Caturra", "Parainema", "Other",
+];
 
 async function sha256Hex(data: string): Promise<string> {
   const encoded = new TextEncoder().encode(data);
@@ -338,12 +349,18 @@ export default function FarmerLotEditPage() {
                         <FormItem>
                           <FormLabel className="text-white/80">{t("variety")}</FormLabel>
                           <FormControl>
-                            <Input
-                              className={inputClasses}
-                              placeholder="e.g., Geisha"
-                              {...field}
-                              value={typeof field.value === "string" ? field.value : (field.value ?? "")}
-                            />
+                            <Select value={typeof field.value === "string" ? field.value : undefined} onValueChange={field.onChange}>
+                              <SelectTrigger className={inputClasses}>
+                                <SelectValue placeholder="e.g., Geisha" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {COFFEE_VARIETIES.map((v) => (
+                                  <SelectItem key={v} value={v}>
+                                    {v}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -362,7 +379,7 @@ export default function FarmerLotEditPage() {
                               className={inputClasses}
                               placeholder="e.g., 875"
                               {...field}
-                              value={typeof field.value === "number" ? field.value : ""}
+                              value={(field.value as string | number | undefined) ?? ""}
                             />
                           </FormControl>
                           <FormMessage />
@@ -639,7 +656,7 @@ export default function FarmerLotEditPage() {
                           type="number"
                           className={inputClasses}
                           {...field}
-                          value={typeof field.value === "number" ? field.value : ""}
+                          value={(field.value as string | number | undefined) ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -658,7 +675,7 @@ export default function FarmerLotEditPage() {
                           type="number"
                           className={inputClasses}
                           {...field}
-                          value={typeof field.value === "number" ? field.value : ""}
+                          value={(field.value as string | number | undefined) ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -676,9 +693,10 @@ export default function FarmerLotEditPage() {
                         <Input
                           type="number"
                           step="0.01"
+                          disabled
                           className={inputClasses}
                           {...field}
-                          value={typeof field.value === "number" ? field.value : ""}
+                          value={(field.value as string | number | undefined) ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -697,7 +715,7 @@ export default function FarmerLotEditPage() {
                           type="number"
                           className={inputClasses}
                           {...field}
-                          value={typeof field.value === "number" ? field.value : ""}
+                          value={(field.value as string | number | undefined) ?? ""}
                         />
                       </FormControl>
                       <FormMessage />

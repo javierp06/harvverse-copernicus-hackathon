@@ -40,6 +40,12 @@ const lotStatusSchema = z.enum(lotStatusEnum.enumValues);
 const copernicusSourceModeSchema = z.enum(copernicusSourceModeEnum.enumValues);
 const lotCreateStatusSchema = z.enum(["draft", "available"]);
 const execFileAsync = promisify(execFile);
+const publicProofLotStatuses = new Set<string>([
+  "available",
+  "reserved",
+  "active",
+  "settled",
+]);
 const lotCreateSchema = insertLotSchema.pick({
   farmId: true,
   code: true,
@@ -82,6 +88,10 @@ type PublicLotRecord = typeof lots.$inferSelect & {
   plans: Array<typeof plans.$inferSelect>;
 };
 type LotForCopernicus = typeof lots.$inferSelect;
+
+function isPublicProofLotStatus(status: string) {
+  return publicProofLotStatuses.has(status);
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
@@ -450,7 +460,7 @@ export const lotsRouter = router({
           plans: true,
         },
       });
-      if (!lot || lot.status !== "available") {
+      if (!lot || !isPublicProofLotStatus(lot.status)) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Lot not found" });
       }
 
@@ -472,7 +482,7 @@ export const lotsRouter = router({
           plans: true,
         },
       });
-      if (!lot || lot.status !== "available") {
+      if (!lot || !isPublicProofLotStatus(lot.status)) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Lot not found" });
       }
 

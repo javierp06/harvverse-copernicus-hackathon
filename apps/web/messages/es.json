@@ -208,7 +208,7 @@
     "outside_farm_warning": "Algunas esquinas del lote parecen estar fuera del límite de la finca. Verifica el polígono.",
     "investment_preview": "Vista Previa de Inversión (para {area} manzanas)",
     "lot_boundary_with_farm": "Límite del Lote (azul = límite de la finca)",
-    "lot_boundary": "Límite del Lote (opcional)",
+    "lot_boundary": "Límite del Lote",
     "polygon_guide_title": "¿Cómo crear el polígono de tu lote?",
     "polygon_guide_app": "Google Earth",
     "polygon_guide_step1": "Descarga Google Earth en tu teléfono",
@@ -330,7 +330,9 @@
     "s1_vh_vv_rvi": "S1 VH/VV · RVI",
     "era5_rainfall": "Lluvia ERA5",
     "score_version": "Versión de puntaje",
-    "unit_mm_year": "mm/año"
+    "unit_mm_year": "mm/año",
+    "unit_masl": "msnm",
+    "unit_mzn": "mz"
   },
   "risk_score": {},
   "partnership": {

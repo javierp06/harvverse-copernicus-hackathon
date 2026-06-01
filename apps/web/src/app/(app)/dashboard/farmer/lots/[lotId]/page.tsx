@@ -163,7 +163,7 @@ export default function FarmerLotDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
         <GlassCard className="overflow-hidden border-primary/20 lg:col-span-2">
           <div className="flex flex-col">
             <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.02] px-6 py-4">
