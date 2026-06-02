@@ -22,6 +22,8 @@ import { useState } from "react";
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
 import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
+import { CopernicusBadgeRow } from "@/components/copernicus/copernicus-badges";
+import { lotSummaryFromRow } from "@/lib/copernicus-snapshot";
 
 interface Plan {
   id: number;
@@ -40,6 +42,10 @@ interface Lot {
   altitudeMasl?: number | null;
   areaManzanas?: string | null;
   status: string;
+  riskScore?: number | null;
+  riskTier?: string | null;
+  eudrStatus?: string | null;
+  copernicusSnapshotId?: number | null;
   coverImages?: string[] | null;
   harvestYear?: number | null;
   plans: Plan[];
@@ -78,6 +84,8 @@ export function LotCard({ lot, variant, pendingProposals = 0 }: LotCardProps) {
     : null;
 
   const displayImages = lot.coverImages?.filter(Boolean) ?? [];
+  const copernicusSummary = lotSummaryFromRow(lot);
+  const tc = useTranslations("copernicus");
 
   const nextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -152,10 +160,13 @@ export function LotCard({ lot, variant, pendingProposals = 0 }: LotCardProps) {
             </>
           )}
 
-          <div className="absolute top-2 left-2 flex flex-col gap-1.5 pointer-events-none">
+          <div className="absolute top-2 left-2 flex max-w-[70%] flex-col gap-1.5 pointer-events-none">
             <Badge className={`rounded-full border text-[9px] px-2 py-0 backdrop-blur-md ${statusBadgeStyles(lot.status)}`}>
               {t(`status_${lot.status}` as Parameters<typeof t>[0]) ?? lot.status}
             </Badge>
+            {copernicusSummary.hasSnapshot || copernicusSummary.riskScore != null ? (
+              <CopernicusBadgeRow summary={copernicusSummary} compact />
+            ) : null}
           </div>
 
           {variant === "farmer" && pendingProposals > 0 && (
@@ -224,16 +235,31 @@ export function LotCard({ lot, variant, pendingProposals = 0 }: LotCardProps) {
             </div>
           )}
 
-          <div className="mt-auto">
+          <div className="mt-auto space-y-2">
             {variant === "partner" ? (
-              <Button
-                className="h-8 w-full bg-primary text-xs text-[#001020] hover:bg-primary/90"
-                onClick={() => router.push(`/lots/${lot.id}` as Route)}
-              >
-                {t("view_lot")}
-                <ArrowRight className="ml-2 size-3.5" />
-              </Button>
-            ) : (
+              <div className="flex gap-2">
+                <Button
+                  className="h-8 flex-1 bg-primary text-xs text-[#001020] hover:bg-primary/90"
+                  onClick={() => router.push(`/lots/${lot.id}` as Route)}
+                >
+                  {t("view_lot")}
+                  <ArrowRight className="ml-2 size-3.5" />
+                </Button>
+                {lot.code ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 border-primary/30 px-2 text-primary hover:bg-primary/10"
+                    onClick={() =>
+                      router.push(`/lot/${encodeURIComponent(lot.code ?? "")}` as Route)
+                    }
+                    title={tc("view_proof")}
+                  >
+                    QR
+                  </Button>
+                ) : null}
+              </div>
+            ) : variant === "farmer" ? (
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -260,7 +286,7 @@ export function LotCard({ lot, variant, pendingProposals = 0 }: LotCardProps) {
                   </Button>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </GlassCard>

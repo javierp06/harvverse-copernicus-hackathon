@@ -13,6 +13,8 @@ import {
 } from "./schema";
 import { and, eq } from "drizzle-orm";
 
+import { DEMO_LOT_POLYGON } from "./demo-lot-fixtures";
+
 const DEMO_LOT = {
   lotCode: "HV-HN-ZAF-L02",
   farmName: "Zafiro",
@@ -68,9 +70,17 @@ async function upsertFarm(
 async function upsertLot(
   values: Omit<typeof lots.$inferInsert, "id" | "createdAt" | "updatedAt">,
 ): Promise<Lot> {
-  await db.insert(lots).values(values).onConflictDoNothing({
-    target: lots.code,
-  });
+  await db
+    .insert(lots)
+    .values(values)
+    .onConflictDoUpdate({
+      target: lots.code,
+      set: {
+        polygon: values.polygon,
+        farmId: values.farmId,
+        updatedAt: new Date(),
+      },
+    });
   if (!values.code) throw new Error("Lot code is required for seed");
   const lot = await db.query.lots.findFirst({
     where: eq(lots.code, values.code),
@@ -121,8 +131,16 @@ async function seed() {
     longitude: DEMO_LOT.longitude,
     coeScore: "92.75",
     verified: true,
+    polygon: DEMO_LOT_POLYGON,
   });
   console.log(`  farm #${farm.id} (${farm.name})`);
+
+  if (!farm.polygon) {
+    await db
+      .update(farms)
+      .set({ polygon: DEMO_LOT_POLYGON, updatedAt: new Date() })
+      .where(eq(farms.id, farm.id));
+  }
 
   const lot = await upsertLot({
     farmId: farm.id,
@@ -139,6 +157,7 @@ async function seed() {
     harvestYear: 2026,
     status: "available",
     activePlanCode: PLAN_CODE,
+    polygon: DEMO_LOT_POLYGON,
   });
   console.log(`  lot #${lot.id} (${lot.code})`);
 

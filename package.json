@@ -25,6 +25,7 @@
     "db:generate": "turbo run db:generate --filter=@harvverse-copernicus-hackathon/db",
     "db:migrate": "turbo run db:migrate --filter=@harvverse-copernicus-hackathon/db",
     "db:seed": "turbo run db:seed --filter=@harvverse-copernicus-hackathon/db",
+    "db:seed-copernicus-demo": "node --import tsx scripts/seed-copernicus-demo.ts",
     "db:start": "turbo run db:start --filter=@harvverse-copernicus-hackathon/db",
     "db:watch": "turbo run db:watch --filter=@harvverse-copernicus-hackathon/db",
     "db:stop": "turbo run db:stop --filter=@harvverse-copernicus-hackathon/db",

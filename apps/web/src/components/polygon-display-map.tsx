@@ -60,7 +60,7 @@ export default function PolygonDisplayMap({
 
   if (positions.length < 3) {
     return (
-      <div className={className} style={{ height: "100%", width: "100%" }}>
+      <div className={className} style={{ height: "100%", width: "100%", minHeight: 320 }}>
         <div className="flex h-full min-h-[320px] items-center justify-center bg-white/5 px-6 text-center text-sm text-white/45">
           {invalidPolygonMessage}
         </div>
@@ -68,21 +68,33 @@ export default function PolygonDisplayMap({
     );
   }
 
+  const satelliteTiles =
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  const fallbackTiles = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+
   return (
-    <div className={className} style={{ height: "100%", width: "100%", position: "relative" }}>
+    <div
+      className={className}
+      style={{ height: "100%", width: "100%", minHeight: 320, position: "relative" }}
+    >
       <MapContainer
-        center={[0, 0]}
-        zoom={13}
+        center={positions[0] as LatLngExpression}
+        zoom={16}
         zoomControl={false}
         dragging={false}
         scrollWheelZoom={false}
         doubleClickZoom={false}
-        className="z-0"
-        style={{ height: "100%", width: "100%" }}
+        className="z-0 h-full w-full"
+        style={{ height: "100%", width: "100%", minHeight: 320 }}
       >
         <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution='Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+          key={tileError ? "osm-fallback" : "esri-satellite"}
+          url={tileError ? fallbackTiles : satelliteTiles}
+          attribution={
+            tileError
+              ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              : "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+          }
           eventHandlers={{
             tileerror: () => setTileError(true),
           }}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, BarChart3, Sprout, TrendingUp, ArrowRight } from "lucide-react";
 import type { Route } from "next";
@@ -49,8 +50,14 @@ export default function PlayerDashboardPage() {
 
   const isLoading = userLoading || partnershipLoading;
 
+  useEffect(() => {
+    if (userLoading) return;
+    if (user && user.role !== "partner") {
+      router.replace("/dashboard/farmer");
+    }
+  }, [user, userLoading, router]);
+
   if (!userLoading && user && user.role !== "partner") {
-    router.replace("/dashboard/farmer");
     return null;
   }
 

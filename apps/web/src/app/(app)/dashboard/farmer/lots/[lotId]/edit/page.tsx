@@ -166,8 +166,14 @@ export default function FarmerLotEditPage() {
     });
   }, [searchParams]);
 
+  useEffect(() => {
+    if (userLoading) return;
+    if (user && user.role !== "farmer") {
+      router.replace("/dashboard/player");
+    }
+  }, [user, userLoading, router]);
+
   if (!userLoading && user && user.role !== "farmer") {
-    router.replace("/dashboard/player");
     return null;
   }
 
