@@ -1,0 +1,24 @@
+{
+  "name": "whatsapp-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "dry-run": "TMPDIR=/tmp WHATSAPP_DRY_RUN=true tsx src/index.ts",
+    "run": "TMPDIR=/tmp tsx src/index.ts"
+  },
+  "dependencies": {
+    "@harvverse-copernicus-hackathon/env": "workspace:*",
+    "dotenv": "catalog:",
+    "pg": "^8.17.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@harvverse-copernicus-hackathon/config": "workspace:*",
+    "@types/node": "^22.13.14",
+    "@types/pg": "^8.16.0",
+    "tsx": "^4.21.0",
+    "typescript": "catalog:"
+  }
+}

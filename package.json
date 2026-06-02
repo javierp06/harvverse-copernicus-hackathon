@@ -28,7 +28,9 @@
     "db:start": "turbo run db:start --filter=@harvverse-copernicus-hackathon/db",
     "db:watch": "turbo run db:watch --filter=@harvverse-copernicus-hackathon/db",
     "db:stop": "turbo run db:stop --filter=@harvverse-copernicus-hackathon/db",
-    "db:down": "turbo run db:down --filter=@harvverse-copernicus-hackathon/db"
+    "db:down": "turbo run db:down --filter=@harvverse-copernicus-hackathon/db",
+    "whatsapp:dry-run": "pnpm --filter whatsapp-worker dry-run",
+    "whatsapp:run": "pnpm --filter whatsapp-worker run"
   },
   "dependencies": {
     "@harvverse-copernicus-hackathon/env": "workspace:*",
