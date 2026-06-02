@@ -7,7 +7,6 @@ import type { Route } from "next";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import type { Polygon } from "geojson";
 import { MapPin, Mountain, Sprout, Layers, ArrowLeft } from "lucide-react";
 
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
@@ -16,6 +15,10 @@ import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { Skeleton } from "@harvverse-copernicus-hackathon/ui/components/skeleton";
 import { trpc } from "@/utils/trpc";
 import { motion } from "framer-motion";
+import { FarmLotCopernicusRow } from "@/components/copernicus/farm-lot-copernicus-row";
+import { CopernicusBadgeRow } from "@/components/copernicus/copernicus-badges";
+import { aggregateFarmCopernicusSummary } from "@/lib/copernicus-snapshot";
+import { isGeoJsonPolygon, resolveFarmMapPolygon } from "@/lib/geo-polygon";
 
 const PolygonDisplayMap = dynamic(() => import("@/components/polygon-display-map"), {
   ssr: false,
@@ -31,6 +34,8 @@ export default function PublicFarmDetailPage() {
   const farmId = Number(params.farmId);
   const t = useTranslations("landing");
   const tf = useTranslations("farm");
+  const tc = useTranslations("copernicus");
+  const tw = useTranslations("waitlist");
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const { data: farm, isLoading } = useQuery(
@@ -58,7 +63,7 @@ export default function PublicFarmDetailPage() {
         <GlassCard className="p-12 text-center border-primary/20">
           <p className="text-white/60">{tf("not_found")}</p>
           <Button asChild variant="link" className="mt-4 text-primary">
-            <Link href="/farms">{t("back_to_directory")}</Link>
+            <Link href="/farms">{tf("back_to_directory")}</Link>
           </Button>
         </GlassCard>
       </div>
@@ -71,6 +76,13 @@ export default function PublicFarmDetailPage() {
   ].filter(Boolean);
 
   const [mainImage, ...gallery] = allImages;
+  const farmCopernicus = aggregateFarmCopernicusSummary(farm.lots ?? []);
+  const lotsWithCode = (farm.lots ?? []).filter((l) => l.code);
+  const mapPolygon = resolveFarmMapPolygon(farm.polygon, farm.lots ?? []);
+  const showMapHero = !mainImage && mapPolygon != null;
+  const showFarmBoundaryMap =
+    mainImage != null && isGeoJsonPolygon(farm.polygon);
+  const mapFromLotOnly = showMapHero && !isGeoJsonPolygon(farm.polygon);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0F1A24]">
@@ -91,6 +103,16 @@ export default function PublicFarmDetailPage() {
               >
                 {mainImage ? (
                   <img src={mainImage} alt={farm.name} className="size-full object-cover" />
+                ) : showMapHero && mapPolygon ? (
+                  <PolygonDisplayMap
+                    polygon={mapPolygon}
+                    className="absolute inset-0"
+                    color="#93D832"
+                    fillOpacity={0.25}
+                    mapLabel={tf("satellite_preview")}
+                    invalidPolygonMessage={tf("satellite_invalid_polygon")}
+                    tileErrorMessage={tf("satellite_tile_error")}
+                  />
                 ) : (
                   <div className="size-full bg-white/5 flex items-center justify-center text-white/10">
                     <Sprout className="size-24" />
@@ -98,6 +120,10 @@ export default function PublicFarmDetailPage() {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F1A24]/60 to-transparent pointer-events-none" />
               </motion.div>
+
+              {mapFromLotOnly ? (
+                <p className="text-center text-xs text-white/45">{tf("satellite_from_lot")}</p>
+              ) : null}
 
               {gallery.length > 0 && (
                 <div className="grid grid-cols-4 gap-4">
@@ -113,9 +139,14 @@ export default function PublicFarmDetailPage() {
                 </div>
               )}
 
-              {farm.polygon != null ? (
+              {showFarmBoundaryMap && isGeoJsonPolygon(farm.polygon) ? (
                 <div className="h-80 rounded-3xl overflow-hidden border border-white/10 bg-white/5 shadow-inner">
-                  <PolygonDisplayMap polygon={farm.polygon as Polygon} />
+                  <PolygonDisplayMap
+                    polygon={farm.polygon}
+                    mapLabel={tf("map_farm_boundary")}
+                    invalidPolygonMessage={tf("satellite_invalid_polygon")}
+                    tileErrorMessage={tf("satellite_tile_error")}
+                  />
                 </div>
               ) : null}
             </div>
@@ -141,32 +172,47 @@ export default function PublicFarmDetailPage() {
                     {tf("verified")}
                   </Badge>
                 )}
+                <CopernicusBadgeRow summary={farmCopernicus} />
               </div>
+
+              {lotsWithCode.length > 0 ? (
+                <GlassCard className="border-primary/20 p-6">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary">
+                    Copernicus
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-white">{tc("farm_lots_copernicus")}</h2>
+                  <div className="mt-4 space-y-3">
+                    {lotsWithCode.map((lot) => (
+                      <FarmLotCopernicusRow key={lot.id} lot={lot} />
+                    ))}
+                  </div>
+                </GlassCard>
+              ) : null}
 
               <div className="grid grid-cols-2 gap-y-8 gap-x-12 py-8 border-y border-white/5">
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2">
-                    <MapPin className="size-3 text-primary" /> {t("label_location")}
+                    <MapPin className="size-3 text-primary" /> {tf("label_location")}
                   </p>
                   <p className="text-lg font-bold text-white/80">{farm.region}, {farm.country}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2">
-                    <Mountain className="size-3 text-primary" /> {t("label_altitude")}
+                    <Mountain className="size-3 text-primary" /> {tf("label_altitude")}
                   </p>
-                  <p className="text-lg font-bold text-white/80">{farm.altitudeMasl ?? "—"} {t("label_masl")}</p>
+                  <p className="text-lg font-bold text-white/80">{farm.altitudeMasl ?? "—"} {tf("label_masl")}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2">
-                    <Sprout className="size-3 text-primary" /> {t("label_variety")}
+                    <Sprout className="size-3 text-primary" /> {tf("label_variety")}
                   </p>
-                  <p className="text-lg font-bold text-white/80">{(farm.varieties ?? [])[0] ?? t("specialty_blend")}</p>
+                  <p className="text-lg font-bold text-white/80">{(farm.varieties ?? [])[0] ?? tf("specialty_blend")}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2">
-                    <Layers className="size-3 text-primary" /> {t("label_area")}
+                    <Layers className="size-3 text-primary" /> {tf("label_area")}
                   </p>
-                  <p className="text-lg font-bold text-white/80">{farm.areaManzanas ? `${Number(farm.areaManzanas).toFixed(1)} ${t("label_hectares")}` : "—"}</p>
+                  <p className="text-lg font-bold text-white/80">{farm.areaManzanas ? `${Number(farm.areaManzanas).toFixed(1)} ${tf("unit_mzn")}` : "—"}</p>
                 </div>
               </div>
 
@@ -174,7 +220,7 @@ export default function PublicFarmDetailPage() {
                 <div className="bg-[#1E3A2F]/40 p-8 rounded-3xl border border-primary/20 space-y-6">
                   <div className="flex items-center gap-2 text-primary font-bold">
                     <div className="size-2 bg-primary rounded-full animate-pulse" />
-                    {t("available_co_investment")}
+                    {tf("available_co_investment")}
                   </div>
                   <Button
                     asChild
@@ -182,7 +228,7 @@ export default function PublicFarmDetailPage() {
                     className="w-full h-16 bg-primary text-[#0F1A24] font-black text-lg rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
                   >
                     <Link href="/waiting-list">
-                      {useTranslations("waitlist")("submit")}
+                      {tw("submit")}
                     </Link>
                   </Button>
                 </div>
@@ -197,7 +243,7 @@ export default function PublicFarmDetailPage() {
         <div className="mx-auto max-w-7xl px-4 md:px-6">
            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
               <p className="text-xl md:text-2xl font-bold text-white text-center md:text-left">
-                {t("is_this_your_farm")} {t("claim_profile")}
+                {tf("is_this_your_farm")} {tf("claim_profile")}
               </p>
               <Button
                 asChild

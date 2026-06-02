@@ -41,7 +41,8 @@ import {
 import { useAccount, useConnect } from "wagmi";
 
 import { formatUsdFromCents } from "@/lib/format";
-import { chainLabel, getSnapshotChain } from "@/lib/chainProof";
+import { getSnapshotChain } from "@/lib/chainProof";
+import { CopernicusPartnerPanel } from "@/components/copernicus/copernicus-partner-panel";
 import { useCurrentUser } from "@/hooks/use-auth";
 import { trpc } from "@/utils/trpc";
 import { useReservePartnership, type ReserveStep } from "@/hooks/use-reserve-partnership";
@@ -384,7 +385,7 @@ export default function LotDetailPage() {
           <p className="text-white/60">{t("not_found")}</p>
         </GlassCard>
       ) : (
-        <div className="max-w-5xl">
+        <div className="max-w-7xl">
           {/* Header */}
           <div className="mb-8">
             {(() => {
@@ -408,12 +409,14 @@ export default function LotDetailPage() {
               return (
                 <>
                   {displayPolygon ? (
-                    <div className="mb-2 overflow-hidden rounded-lg border border-white/10">
-                      <div className="h-[220px]">
+                    <div className="mb-4 overflow-hidden rounded-2xl border border-white/10">
+                      <div className="relative h-[280px] w-full md:h-[360px]">
                         <PolygonDisplayMap
                           polygon={displayPolygon}
+                          className="absolute inset-0"
                           color={lotPolygon ? "#93D832" : "#67B9C1"}
                           fillOpacity={lotPolygon ? 0.25 : 0.14}
+                          mapLabel={t("lot_boundary")}
                         />
                       </div>
                       {!lotPolygon && farmPolygon ? (
@@ -424,7 +427,7 @@ export default function LotDetailPage() {
                     </div>
                   ) : null}
                   {mapsUrl ? (
-                    <div className="flex justify-end mb-4">
+                    <div className="mb-4 flex justify-end">
                       <a
                         href={mapsUrl}
                         target="_blank"
@@ -495,11 +498,10 @@ export default function LotDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <GlassCard className="p-6 md:p-8 border-primary/20 lg:col-span-2">
-              <h2 className="section-title mb-6 uppercase text-sm tracking-widest font-bold text-primary">{t("plan_terms")}</h2>
-              {activePlan ? (
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <GlassCard className="mb-6 p-6 md:p-8 border-primary/20">
+            <h2 className="section-title mb-6 uppercase text-sm tracking-widest font-bold text-primary">{t("plan_terms")}</h2>
+            {activePlan ? (
+              <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
                   <div className="bg-white/5 rounded-lg p-3 border border-white/5">
                     <dt className="text-white/40 text-[10px] uppercase tracking-wider mb-1">{t("plan_code")}</dt>
                     <dd className="text-white font-medium">{activePlan.planCode}</dd>
@@ -552,119 +554,20 @@ export default function LotDetailPage() {
               ) : (
                 <p className="text-white/40 text-sm italic">{t("no_active_plan")}</p>
               )}
-            </GlassCard>
+          </GlassCard>
 
-            <GlassCard className="p-6 md:p-8 border-primary/20">
-              <div className="mb-5 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
-                    Copernicus
-                  </p>
-                  <h2 className="mt-1 font-trenda text-lg font-bold text-white">
-                    {t("satellite_verification")}
-                  </h2>
-                </div>
-                <Badge className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase ${scoreTone(copernicusSnapshot?.riskScore)}`}>
-                  {copernicusSnapshot?.sourceMode ?? t("pending")}
-                </Badge>
-              </div>
-
-              {copernicusSnapshot ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className={`rounded-lg border p-3 ${scoreTone(copernicusSnapshot.riskScore)}`}>
-                      <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">{t("risk_score")}</p>
-                      <p className="mt-1 text-3xl font-black">
-                        {copernicusSnapshot.riskScore}
-                        <span className="text-sm opacity-60">/100</span>
-                      </p>
-                    </div>
-                    <div className={`rounded-lg border p-3 ${copernicusEligible ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : "border-red-400/30 bg-red-400/10 text-red-300"}`}>
-                      <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
-                        {t("contract_gate")}
-                      </p>
-                      <p className="mt-2 text-sm font-black">
-                        {copernicusEligible ? t("eligible") : t("blocked")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">EUDR</span>
-                      <span className="font-bold text-white">{eudrLabel(copernicusSnapshot.eudrStatus)}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">{t("version")}</span>
-                      <span className="font-mono text-xs text-primary">{copernicusSnapshot.scoreVersion}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="flex items-center gap-1 text-white/45">
-                        <Fingerprint className="h-3.5 w-3.5" />
-                        {t("hash")}
-                      </span>
-                      <span className="font-mono text-xs text-primary">{shortHash(copernicusSnapshot.scoreHash)}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">{t("local_proof")}</span>
-                      <span className={localProofWritten ? "font-bold text-emerald-300" : "font-bold text-yellow-200"}>
-                        {localProofWritten ? t("verified") : t("pending")}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">{t("chain")}</span>
-                      <span className="font-mono text-xs text-primary">
-                        {chainLabel(chainProof.chainId)} · {chainProof.chainId}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                      <span className="text-white/45">{t("transaction")}</span>
-                      <span className="font-mono text-xs text-primary">{shortHash(chainProof.transactionHash)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    {canWriteLocalProof && !localProofWritten ? (
-                      <Button
-                        size="sm"
-                        className="bg-primary text-[#001020] hover:bg-primary/90 font-bold"
-                        disabled={markLocalProof.isPending}
-                        onClick={() => markLocalProof.mutate({ lotId })}
-                      >
-                        {markLocalProof.isPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <ShieldCheck className="mr-2 h-4 w-4" />
-                        )}
-                        {t("generate_local_proof")}
-                      </Button>
-                    ) : null}
-                    {lot.code ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-white/10 bg-white/[0.03] text-white hover:bg-white/10"
-                        onClick={() => router.push(`/lot/${encodeURIComponent(lot.code ?? "")}` as Route)}
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        {t("qr_proof")}
-                      </Button>
-                    ) : null}
-                  </div>
-                  {markLocalProof.error ? (
-                    <p className="text-xs leading-5 text-red-300">{markLocalProof.error.message}</p>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="rounded-lg border border-yellow-400/20 bg-yellow-400/10 p-4">
-                  <p className="text-sm font-bold text-yellow-200">{t("satellite_pending_title")}</p>
-                  <p className="mt-1 text-xs leading-5 text-yellow-100/65">
-                    {t("satellite_pending_desc")}
-                  </p>
-                </div>
-              )}
-            </GlassCard>
-          </div>
+          <GlassCard className="mb-8 border-primary/20 p-6 md:p-8">
+            <CopernicusPartnerPanel
+              snapshotRaw={copernicusSnapshot}
+              lotCode={lot.code}
+              lotId={lotId}
+              canWriteLocalProof={canWriteLocalProof}
+              localProofWritten={localProofWritten}
+              onMarkLocalProof={() => markLocalProof.mutate({ lotId })}
+              isMarkingProof={markLocalProof.isPending}
+              markProofError={markLocalProof.error?.message ?? null}
+            />
+          </GlassCard>
 
           <GlassCard className="p-6 border-primary/25 bg-primary/5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

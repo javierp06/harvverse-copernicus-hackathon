@@ -32,6 +32,7 @@ import {
 
 import { computeEarnings, formatUsdFromCents, formatUsdPrecise, formatUsd } from "@/lib/format";
 import { asRecord, chainLabel, getSnapshotChain } from "@/lib/chainProof";
+import { CopernicusFarmerStatusCard } from "@/components/copernicus/copernicus-farmer-status-card";
 import { trpc } from "@/utils/trpc";
 
 const PolygonDisplayMap = dynamic(() => import("@/components/polygon-display-map"), {
@@ -185,6 +186,9 @@ export default function FarmerLotDetailPage() {
             </div>
           </div>
         </GlassCard>
+
+        <div className="flex flex-col gap-6">
+          <CopernicusFarmerStatusCard lot={lot} snapshotRaw={copernicusSnapshot} />
 
         <GlassCard className="p-6 md:p-8 border-primary/20">
           <div className="mb-6 flex items-start justify-between gap-3">
@@ -513,6 +517,7 @@ export default function FarmerLotDetailPage() {
             </>
           );
         })()}
+        </div>
       </div>
     </div>
   );

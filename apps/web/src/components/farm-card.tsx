@@ -9,11 +9,17 @@ import { useState } from "react";
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
 import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
+import { CopernicusBadgeRow } from "@/components/copernicus/copernicus-badges";
+import { aggregateFarmCopernicusSummary } from "@/lib/copernicus-snapshot";
 
 interface Lot {
   id: number;
   status: string;
   variety?: string | null;
+  riskScore?: number | null;
+  riskTier?: string | null;
+  eudrStatus?: string | null;
+  copernicusSnapshotId?: number | null;
   plans: unknown[];
 }
 
@@ -72,6 +78,8 @@ export function FarmCard({ farm }: FarmCardProps) {
       ...(farm.lots ?? []).map((l) => l.variety).filter(Boolean),
     ]),
   ) as string[];
+
+  const copernicusSummary = aggregateFarmCopernicusSummary(farm.lots ?? []);
 
   const nextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -145,13 +153,18 @@ export function FarmCard({ farm }: FarmCardProps) {
             </>
           )}
 
-          <div className="absolute top-2 md:top-3 right-2 md:right-3 flex flex-col items-end gap-1 md:gap-2 pointer-events-none">
+          <div className="absolute top-2 md:top-3 right-2 md:right-3 flex max-w-[85%] flex-col items-end gap-1 md:gap-2 pointer-events-none">
             {farm.verified && (
               <Badge className="gap-0.5 md:gap-1 rounded-full border border-primary/30 bg-primary/20 text-[8px] md:text-xs font-bold text-primary backdrop-blur-md px-1.5 md:px-2.5 py-0 md:py-0.5">
                 <CheckCircle2 className="size-2.5 md:size-3.5" />
                 {t("verified")}
               </Badge>
             )}
+            {copernicusSummary.hasSnapshot || copernicusSummary.riskScore != null ? (
+              <div className="pointer-events-auto">
+                <CopernicusBadgeRow summary={copernicusSummary} compact />
+              </div>
+            ) : null}
           </div>
         </div>
 

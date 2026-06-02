@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -60,8 +61,14 @@ export default function FarmerDashboardPage() {
     0,
   );
 
+  useEffect(() => {
+    if (userLoading) return;
+    if (user && user.role !== "farmer") {
+      router.replace("/dashboard/player");
+    }
+  }, [user, userLoading, router]);
+
   if (!userLoading && user && user.role !== "farmer") {
-    router.replace("/dashboard/player");
     return null;
   }
 
