@@ -88,6 +88,14 @@ type PublicLotRecord = typeof lots.$inferSelect & {
   plans: Array<typeof plans.$inferSelect>;
 };
 type LotForCopernicus = typeof lots.$inferSelect;
+type LotPlanEconomics = {
+  investmentTicketCents?: number | null;
+  productionCostCents?: number | null;
+  marketPriceCentsPerLb?: number | null;
+  floorPriceCentsPerLb?: number | null;
+  farmerShareBps?: number | null;
+  partnerShareBps?: number | null;
+};
 
 function isPublicProofLotStatus(status: string) {
   return publicProofLotStatuses.has(status);
@@ -134,10 +142,57 @@ async function resolveHardhatBin(repoRoot: string, contractsDir: string) {
   );
 }
 
+function planToLotEconomics(plan: typeof plans.$inferSelect): LotPlanEconomics {
+  return {
+    investmentTicketCents: plan.ticketCents,
+    productionCostCents: plan.agronomicCostCents,
+    marketPriceCentsPerLb: plan.priceCentsPerLb,
+    floorPriceCentsPerLb: plan.priceFloorCentsPerLb,
+    farmerShareBps: plan.splitFarmerBps,
+    partnerShareBps: plan.splitPartnerBps,
+  };
+}
+
+async function getLotPlanEconomics(
+  db: Db,
+  lot: LotForCopernicus,
+): Promise<LotPlanEconomics> {
+  const activePlan =
+    lot.activePlanCode == null
+      ? null
+      : await db.query.plans.findFirst({
+          where: eq(plans.planCode, lot.activePlanCode),
+        });
+
+  const lotPlan =
+    activePlan ??
+    (await db.query.plans.findFirst({
+      where: eq(plans.lotId, lot.id),
+      orderBy: [desc(plans.createdAt)],
+    }));
+
+  const codePlan =
+    lotPlan ??
+    (lot.code == null
+      ? null
+      : await db.query.plans.findFirst({
+          where: eq(plans.lotCode, lot.code),
+          orderBy: [desc(plans.createdAt)],
+        }));
+
+  return codePlan == null ? {} : planToLotEconomics(codePlan);
+}
+
 async function buildCopernicusSnapshotForLot(
+  db: Db,
   lot: LotForCopernicus,
   sourceMode: CopernicusSourceMode,
 ) {
+  const lotWithEconomics = {
+    ...lot,
+    ...(await getLotPlanEconomics(db, lot)),
+  };
+
   if (sourceMode === "live") {
     const credentials = getSentinelHubCredentials(env);
     if (!credentials) {
@@ -148,10 +203,10 @@ async function buildCopernicusSnapshotForLot(
       });
     }
     const token = await getSentinelHubToken(credentials);
-    return buildLiveCopernicusSnapshot(lot, token);
+    return buildLiveCopernicusSnapshot(lotWithEconomics, token);
   }
 
-  return buildFixtureCopernicusSnapshot(lot);
+  return buildFixtureCopernicusSnapshot(lotWithEconomics);
 }
 
 async function persistCopernicusSnapshot(db: Db, snapshot: CopernicusLotSnapshot) {
@@ -540,6 +595,7 @@ export const lotsRouter = router({
       }
 
       const snapshot = await buildCopernicusSnapshotForLot(
+        ctx.db,
         lot,
         input.sourceMode,
       ).catch((error: unknown) => {
@@ -716,7 +772,11 @@ export const lotsRouter = router({
           : "fixture";
 
         void (async () => {
-          const snapshot = await buildCopernicusSnapshotForLot(lot, sourceMode);
+          const snapshot = await buildCopernicusSnapshotForLot(
+            ctx.db,
+            lot,
+            sourceMode,
+          );
           await persistCopernicusSnapshot(ctx.db, snapshot);
         })().catch((error: unknown) => {
           console.error("[lots.create] automatic Copernicus analysis failed:", {

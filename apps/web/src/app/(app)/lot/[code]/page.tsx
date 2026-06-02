@@ -123,9 +123,27 @@ type CopernicusSnapshotView = {
     ndviBenchmarkAuc?: number;
     ndviModifier?: number;
     floweringPeakNdvi?: number | null;
+    maturityFactor?: number;
+    plantAgeYears?: number | null;
+    renewalFlag?: boolean;
     densityModifier?: number;
     plantsPerManzana?: number | null;
     expectedPlantsPerManzana?: number;
+    projectedOroQuintales?: number;
+    projectedOroLbs?: number;
+    floorPriceUsdPerLb?: number;
+    marketPriceUsdPerLb?: number;
+    effectivePriceUsdPerLb?: number;
+    grossRevenueUsd?: number;
+    productionCostUsd?: number;
+    projectedProfitUsd?: number;
+    farmerProfitUsd?: number;
+    partnerProfitUsd?: number;
+    investmentTicketUsd?: number | null;
+    partnerReturnTotalUsd?: number | null;
+    farmerShareBps?: number;
+    partnerShareBps?: number;
+    parchmentToOroFactor?: number;
     formula?: string;
   };
   scoreHash: string;
@@ -207,6 +225,17 @@ function numberValue(value: unknown, fallback = 0) {
 function metricValue(value: unknown, decimals = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toFixed(decimals) : "--";
+}
+
+function moneyValue(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      }).format(parsed)
+    : "--";
 }
 
 function nullableNumber(value: unknown) {
@@ -440,6 +469,79 @@ export default function PublicLotProofPage() {
                       <Metric label={t("low_band")} value={`${snapshot.yieldPredict.lowBandQuintales} ${t("unit_qq")}`} description={t("yield_help.low_band")} size="sm" />
                       <Metric label={t("high_band")} value={`${snapshot.yieldPredict.highBandQuintales} ${t("unit_qq")}`} description={t("yield_help.high_band")} size="sm" />
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Metric
+                        label={t("maturity_factor")}
+                        value={`${snapshot.yieldPredict.maturityFactor?.toFixed(2) ?? "1.00"}${t("unit_x")}`}
+                        description={t("yield_help.maturity_factor")}
+                        size="sm"
+                      />
+                      <Metric
+                        label={t("density_modifier")}
+                        value={`${snapshot.yieldPredict.densityModifier?.toFixed(2) ?? "1.00"}${t("unit_x")}`}
+                        description={t("yield_help.density_modifier")}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Metric
+                        label={t("oro_lbs")}
+                        value={`${metricValue(snapshot.yieldPredict.projectedOroLbs, 0)} ${t("unit_lb")}`}
+                        description={t("yield_help.oro_lbs")}
+                        size="sm"
+                      />
+                      <Metric
+                        label={t("effective_price")}
+                        value={`${moneyValue(snapshot.yieldPredict.effectivePriceUsdPerLb)}/${t("unit_lb")}`}
+                        description={t("yield_help.effective_price")}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <Metric
+                        label={t("gross_revenue")}
+                        value={moneyValue(snapshot.yieldPredict.grossRevenueUsd)}
+                        description={t("yield_help.gross_revenue")}
+                        size="sm"
+                      />
+                      <Metric
+                        label={t("farmer_profit")}
+                        value={moneyValue(snapshot.yieldPredict.farmerProfitUsd)}
+                        description={t("yield_help.farmer_profit")}
+                        size="sm"
+                      />
+                      <Metric
+                        label={t("partner_profit")}
+                        value={moneyValue(snapshot.yieldPredict.partnerProfitUsd)}
+                        description={t("yield_help.partner_profit")}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <Metric
+                        label={t("production_cost")}
+                        value={moneyValue(snapshot.yieldPredict.productionCostUsd)}
+                        description={t("yield_help.production_cost")}
+                        size="sm"
+                      />
+                      <Metric
+                        label={t("investment_ticket")}
+                        value={moneyValue(snapshot.yieldPredict.investmentTicketUsd)}
+                        description={t("yield_help.investment_ticket")}
+                        size="sm"
+                      />
+                      <Metric
+                        label={t("partner_total")}
+                        value={moneyValue(snapshot.yieldPredict.partnerReturnTotalUsd)}
+                        description={t("yield_help.partner_total")}
+                        size="sm"
+                      />
+                    </div>
+                    {snapshot.yieldPredict.renewalFlag ? (
+                      <div className="rounded-lg border border-yellow-300/20 bg-yellow-300/10 p-3 text-xs leading-relaxed text-yellow-100/75">
+                        {t("renewal_flag")}
+                      </div>
+                    ) : null}
                   </div>
                 </GlassCard>
 
