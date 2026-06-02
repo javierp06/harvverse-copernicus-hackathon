@@ -164,6 +164,9 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
   const scoreCapRecord = asRecord(dataQualityRecord?.scoreCap);
   const yieldRecord = asRecord(record.yieldPredict);
   const sentinel2Record = asRecord(record.sentinel2);
+  const sentinel1Record = asRecord(record.sentinel1);
+  const demRecord = asRecord(record.dem);
+  const era5Record = asRecord(record.era5);
   const eudrRecord = asRecord(record.eudr);
   const chainFromDb = asRecord(record.chain);
 
@@ -221,12 +224,27 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
       currentMsi: nullableNumber(sentinel2Record?.currentMsi),
       historicalSeries,
     },
-    sentinel1: (asRecord(record.sentinel1) ?? { moistureProxy: "—" }) as CopernicusSnapshotView["sentinel1"],
-    dem: (asRecord(record.dem) ?? { altitudeMasl: null, areaManzanas: null }) as CopernicusSnapshotView["dem"],
+    sentinel1: {
+      vhVvRatio: nullableNumber(sentinel1Record?.vhVvRatio),
+      radarVegetationIndex: nullableNumber(sentinel1Record?.radarVegetationIndex),
+      moistureProxy:
+        sentinel1Record?.moistureProxy == null ? "unknown" : String(sentinel1Record.moistureProxy),
+      structuralChangeSignal:
+        sentinel1Record?.structuralChangeSignal == null
+          ? undefined
+          : String(sentinel1Record.structuralChangeSignal),
+    },
+    dem: {
+      altitudeMasl: nullableNumber(demRecord?.altitudeMasl),
+      areaManzanas: nullableNumber(demRecord?.areaManzanas),
+      terrainSuitability:
+        demRecord?.terrainSuitability == null ? undefined : String(demRecord.terrainSuitability),
+    },
     era5: {
-      ...asRecord(record.era5),
-      annualRainfallMm: nullableNumber(asRecord(record.era5)?.annualRainfallMm),
-    } as CopernicusSnapshotView["era5"],
+      annualRainfallMm: nullableNumber(era5Record?.annualRainfallMm),
+      meanTemperatureC: nullableNumber(era5Record?.meanTemperatureC) ?? undefined,
+      waterStress: era5Record?.waterStress == null ? undefined : String(era5Record.waterStress),
+    },
     eudr: eudrRecord
       ? {
           riskLevel: eudrRecord.riskLevel == null ? undefined : String(eudrRecord.riskLevel),

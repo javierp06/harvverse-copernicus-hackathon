@@ -25,15 +25,19 @@ export function CopernicusQrPanel({ lotCode }: { lotCode: string }) {
   }, [lotCode]);
 
   async function copyUrl() {
-    if (!publicUrl) return;
-    await navigator.clipboard.writeText(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (!publicUrl || !navigator.clipboard?.writeText) return;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
   }
 
   const whatsappDigits = DEMO_WHATSAPP.replace(/\D/g, "");
   const whatsappHref =
-    whatsappDigits.length > 0
+    publicUrl && whatsappDigits.length > 0
       ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
           t("whatsapp_share_text", { url: publicUrl, code: lotCode }),
         )}`

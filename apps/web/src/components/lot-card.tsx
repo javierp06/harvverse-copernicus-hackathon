@@ -247,6 +247,7 @@ export function LotCard({ lot, variant, pendingProposals = 0 }: LotCardProps) {
                 </Button>
                 {lot.code ? (
                   <Button
+                    type="button"
                     size="sm"
                     variant="outline"
                     className="h-8 border-primary/30 px-2 text-primary hover:bg-primary/10"
@@ -254,6 +255,7 @@ export function LotCard({ lot, variant, pendingProposals = 0 }: LotCardProps) {
                       router.push(`/lot/${encodeURIComponent(lot.code ?? "")}` as Route)
                     }
                     title={tc("view_proof")}
+                    aria-label={tc("view_proof")}
                   >
                     QR
                   </Button>

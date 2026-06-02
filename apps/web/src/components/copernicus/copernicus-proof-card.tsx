@@ -26,8 +26,12 @@ export function CopernicusProofCard({ snapshot }: { snapshot: CopernicusSnapshot
   }
 
   async function copyHash() {
-    if (!snapshot.scoreHash) return;
-    await navigator.clipboard.writeText(snapshot.scoreHash);
+    if (!snapshot.scoreHash || !navigator.clipboard?.writeText) return;
+    try {
+      await navigator.clipboard.writeText(snapshot.scoreHash);
+    } catch {
+      // Clipboard access can be blocked in non-secure or embedded browser contexts.
+    }
   }
 
   return (
