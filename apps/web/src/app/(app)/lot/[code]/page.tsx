@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { Polygon } from "geojson";
-import type { ComponentType } from "react";
+import { useMemo, type ComponentType } from "react";
 import { useTranslations } from "next-intl";
 import {
   BadgeCheck,
@@ -228,6 +228,7 @@ function metricValue(value: unknown, decimals = 0) {
 }
 
 function moneyValue(value: unknown) {
+  if (value == null || value === "") return "--";
   const parsed = Number(value);
   return Number.isFinite(parsed)
     ? new Intl.NumberFormat("en-US", {
@@ -274,6 +275,11 @@ export default function PublicLotProofPage() {
   const snapshot = asSnapshot(data?.snapshot);
   const lot = data?.lot;
   const polygon = lot?.polygon as Polygon | null | undefined;
+  const mapCenter = useMemo(() => {
+    const lat = Number(lot?.gpsLat);
+    const lng = Number(lot?.gpsLng);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }, [lot?.gpsLat, lot?.gpsLng]);
 
   function eudrLabel(status: CopernicusSnapshotView["eudrStatus"]) {
     if (status === "verified") return t("eudr_verified");
@@ -341,6 +347,7 @@ export default function PublicLotProofPage() {
                       polygon={polygon}
                       color="#67E8F9"
                       fillOpacity={0.22}
+                      expectedCenter={mapCenter}
                       mapLabel={t("satellite_map")}
                       invalidPolygonMessage={t("invalid_polygon")}
                       tileErrorMessage={t("tile_error")}

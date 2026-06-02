@@ -11,6 +11,7 @@ interface Props {
   className?: string;
   color?: string;
   fillOpacity?: number;
+  expectedCenter?: { lat: number; lng: number } | null;
   mapLabel?: string;
   invalidPolygonMessage?: string;
   tileErrorMessage?: string;
