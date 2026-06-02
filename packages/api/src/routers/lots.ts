@@ -750,6 +750,14 @@ export const lotsRouter = router({
               validatedByName: "Pending validation",
               planHash,
             });
+            const [updatedLot] = await tx
+              .update(lots)
+              .set({ activePlanCode: planCode, updatedAt: new Date() })
+              .where(eq(lots.id, created.id))
+              .returning();
+            if (updatedLot) {
+              created = updatedLot;
+            }
           } catch (err) {
             const pg = err as { code?: string; constraint?: string; detail?: string };
             console.error("[lots.create] plan insert failed:", { code: pg.code, constraint: pg.constraint, detail: pg.detail, message: (err as Error).message });
