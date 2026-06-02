@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   "/waiting-list(.*)",
   "/farms(.*)",
   "/api/health(.*)",
+  "/api/sentinel/agent(.*)",
+  "/api/sentinel/alerts(.*)",
   "/api/trpc(.*)",
 ]);
 

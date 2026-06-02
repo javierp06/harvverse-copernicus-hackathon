@@ -44,7 +44,7 @@ export type SnapshotDataQuality = {
 
 export type CopernicusSnapshotView = {
   sourceMode: CopernicusSourceMode;
-  riskScore: number;
+  riskScore: number | null;
   riskTier: string;
   eudrStatus: EudrStatus;
   eligibleForInvestment: boolean;
@@ -53,7 +53,7 @@ export type CopernicusSnapshotView = {
   sources: SnapshotSource[];
   dataQuality: SnapshotDataQuality;
   sentinel2: {
-    currentNdvi: number;
+    currentNdvi: number | null;
     twoYearAverageNdvi?: number;
     currentNdre?: number | null;
     currentNdwi?: number | null;
@@ -72,7 +72,7 @@ export type CopernicusSnapshotView = {
     terrainSuitability?: string;
   };
   era5: {
-    annualRainfallMm: number;
+    annualRainfallMm: number | null;
     meanTemperatureC?: number;
     waterStress?: string;
   };
@@ -83,9 +83,9 @@ export type CopernicusSnapshotView = {
     reasons?: string[];
   };
   yieldPredict: {
-    projectedQuintales: number;
-    lowBandQuintales: number;
-    highBandQuintales: number;
+    projectedQuintales: number | null;
+    lowBandQuintales: number | null;
+    highBandQuintales: number | null;
     confidence?: string;
     investmentArgument?: string;
     baseYieldQqPerManzana?: number;
@@ -117,6 +117,7 @@ export function metricValue(value: unknown, decimals = 0) {
 }
 
 export function nullableNumber(value: unknown) {
+  if (value == null || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -179,12 +180,14 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
 
   return {
     sourceMode: record.sourceMode === "live" ? "live" : "fixture",
-    riskScore: numberValue(record.riskScore),
+    riskScore: nullableNumber(record.riskScore),
     riskTier: String(record.riskTier ?? "unknown"),
     eudrStatus:
-      record.eudrStatus === "non_compliant" || record.eudrStatus === "unknown"
+      record.eudrStatus === "verified" ||
+      record.eudrStatus === "non_compliant" ||
+      record.eudrStatus === "unknown"
         ? record.eudrStatus
-        : "verified",
+        : "unknown",
     eligibleForInvestment: Boolean(record.eligibleForInvestment),
     scoreVersion: record.scoreVersion == null ? undefined : String(record.scoreVersion),
     variables: Array.isArray(record.variables)
@@ -211,7 +214,7 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
       parcelScale: parseParcelScale(dataQualityRecord?.parcelScale),
     },
     sentinel2: {
-      currentNdvi: numberValue(sentinel2Record?.currentNdvi),
+      currentNdvi: nullableNumber(sentinel2Record?.currentNdvi),
       twoYearAverageNdvi: nullableNumber(sentinel2Record?.twoYearAverageNdvi) ?? undefined,
       currentNdre: nullableNumber(sentinel2Record?.currentNdre),
       currentNdwi: nullableNumber(sentinel2Record?.currentNdwi),
@@ -220,7 +223,10 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
     },
     sentinel1: (asRecord(record.sentinel1) ?? { moistureProxy: "—" }) as CopernicusSnapshotView["sentinel1"],
     dem: (asRecord(record.dem) ?? { altitudeMasl: null, areaManzanas: null }) as CopernicusSnapshotView["dem"],
-    era5: (asRecord(record.era5) ?? { annualRainfallMm: 0 }) as CopernicusSnapshotView["era5"],
+    era5: {
+      ...asRecord(record.era5),
+      annualRainfallMm: nullableNumber(asRecord(record.era5)?.annualRainfallMm),
+    } as CopernicusSnapshotView["era5"],
     eudr: eudrRecord
       ? {
           riskLevel: eudrRecord.riskLevel == null ? undefined : String(eudrRecord.riskLevel),
@@ -230,9 +236,9 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
         }
       : undefined,
     yieldPredict: {
-      projectedQuintales: numberValue(yieldRecord?.projectedQuintales),
-      lowBandQuintales: numberValue(yieldRecord?.lowBandQuintales),
-      highBandQuintales: numberValue(yieldRecord?.highBandQuintales),
+      projectedQuintales: nullableNumber(yieldRecord?.projectedQuintales),
+      lowBandQuintales: nullableNumber(yieldRecord?.lowBandQuintales),
+      highBandQuintales: nullableNumber(yieldRecord?.highBandQuintales),
       confidence: yieldRecord?.confidence == null ? undefined : String(yieldRecord.confidence),
       investmentArgument:
         yieldRecord?.investmentArgument == null ? undefined : String(yieldRecord.investmentArgument),
@@ -322,9 +328,9 @@ export function farmerEligibilityState(
 ): FarmerEligibilityState {
   if (!snapshot) return "pending";
   if (snapshot.eudrStatus === "non_compliant") return "blocked";
-  if (snapshot.riskScore < 40) return "blocked";
+  if (snapshot.riskScore != null && snapshot.riskScore < 40) return "blocked";
   if (snapshot.eudr?.requiresManualReview || snapshot.eudrStatus === "unknown") return "pending";
   if (snapshot.eligibleForInvestment) return "eligible";
-  if (snapshot.riskScore >= 40 && snapshot.riskScore < 60) return "pending";
+  if (snapshot.riskScore != null && snapshot.riskScore >= 40 && snapshot.riskScore < 60) return "pending";
   return "blocked";
 }

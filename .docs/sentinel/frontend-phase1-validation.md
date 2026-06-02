@@ -1,6 +1,6 @@
 # Validación Fase 1 — Frontend Copernicus
 
-**Fecha:** 2025-06-01  
+**Fecha:** 2026-06-02
 **Estado:** ✅ Aprobada para pasar a Fase 2 (demo / WhatsApp / pulido)
 
 ---
@@ -38,7 +38,7 @@
 | Tarjeta agricultor elegibilidad | ✅ | `CopernicusFarmerStatusCard` |
 | Lib compartida snapshot | ✅ | `lib/copernicus-snapshot.ts` |
 | API `publicByCode` statuses ampliados | ✅ | Backend Javier (no bloquea QR tras inversión) |
-| WhatsApp demo (número provisional) | ✅ | `+19063794460` en `copernicus-qr-panel.tsx` |
+| WhatsApp demo (CTA opcional) | ✅ | `NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER`; si no existe, el CTA se oculta. |
 
 ---
 
@@ -80,10 +80,10 @@ Con `pnpm db:start`, `pnpm db:push`, seed/demo y `pnpm dev:web`:
 
 ## 5. Fase 2 — Siguiente trabajo sugerido
 
-1. **Runbook WhatsApp** (`.docs/sentinel/whatsapp-demo-runbook.md`) + URL n8n cuando la tengas.
+1. **Runbook WhatsApp** (`.docs/sentinel/whatsapp-demo-runbook.md`) + endpoints Sentinel Agent y worker WhatsApp.
 2. **Ensayo demo** con lote `HV-HN-ZAF-L02`: `computeCopernicusSnapshot` → opcional `markLocalCopernicusProof`.
 3. **Pulido opcional:** widgets Copernicus en home partner (`dashboard/player`) si lo quieren en el pitch.
-4. **Actualizar número WhatsApp** cuando llegue el definitivo (un solo archivo: `copernicus-qr-panel.tsx`).
+4. **Configurar número WhatsApp** cuando llegue el definitivo (`NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER`).
 
 ---
 

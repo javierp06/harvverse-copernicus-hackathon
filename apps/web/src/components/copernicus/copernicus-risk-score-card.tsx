@@ -28,7 +28,7 @@ export function CopernicusRiskScoreCard({
           />
           <div className="mt-3 flex items-end gap-2">
             <span className={`font-black text-white ${compact ? "text-4xl" : "text-5xl"}`}>
-              {snapshot.riskScore}
+              {snapshot.riskScore ?? "--"}
             </span>
             <span className="pb-1 text-lg font-bold text-white/30">/100</span>
           </div>

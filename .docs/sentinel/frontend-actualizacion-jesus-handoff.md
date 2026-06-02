@@ -86,7 +86,7 @@ pnpm dev:web
 | **C2** | Partner: explore, `/lots/1`, panel Copernicus completo | ✅ (rol `partner` en Drizzle) |
 | **D** | ES/EN | ✅ (asumido OK sin re-prueba exhaustiva) |
 
-**Lote demo:** `HV-HN-ZAF-L02` · Score fixture **88/100** · EUDR verified · `sentinel-v0.2.0`
+**Lote demo:** `HV-HN-ZAF-L02` · Score fixture **88/100** · EUDR verified · `sentinel-v0.3.0`
 
 ---
 
@@ -94,8 +94,8 @@ pnpm dev:web
 
 - `publicByCode` acepta lotes `available`, `reserved`, `active`, `settled`
 - Snapshot no viene en seed; se genera con `computeCopernicusSnapshot` o `pnpm db:seed-copernicus-demo`
-- `scoreVersion`: fixture `sentinel-v0.2.0`, live `sentinel-live-v0.3.0`
-- WhatsApp demo provisional: `+19063794460` en `copernicus-qr-panel.tsx`
+- `scoreVersion`: fixture `sentinel-v0.3.0`, live `sentinel-live-v0.4.0`
+- WhatsApp demo opcional: configurar `NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER`; si no existe, el CTA se oculta.
 
 ---
 
@@ -108,10 +108,10 @@ pnpm dev:web
 - [ ] Hardhat + `markLocalCopernicusProof` (Parte E — opcional)
 - [ ] Confirmar que API `lots.byId` expone `copernicusSnapshot` + `farm.polygon` para partner
 
-### Sheyla (WhatsApp / n8n)
+### Sheyla (WhatsApp / AI SDK)
 
-- [ ] URL webhook n8n cuando esté lista
-- [ ] Número WhatsApp definitivo → Jesús actualiza `copernicus-qr-panel.tsx`
+- [ ] Consumir `/api/sentinel/agent/scenarios` y enviar mensajes con AI SDK / WhatsApp worker
+- [ ] Número WhatsApp definitivo → configurar `NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER` si se quiere mostrar el CTA del QR
 
 ### Jesús / DIGEX (frontend / demo)
 

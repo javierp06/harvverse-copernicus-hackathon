@@ -157,9 +157,27 @@ export interface CopernicusLotSnapshot {
     ndviBenchmarkAuc: number;
     ndviModifier: number;
     floweringPeakNdvi: number | null;
+    maturityFactor: number;
+    plantAgeYears: number | null;
+    renewalFlag: boolean;
     densityModifier: number;
     plantsPerManzana: number | null;
     expectedPlantsPerManzana: number;
+    projectedOroQuintales: number;
+    projectedOroLbs: number;
+    floorPriceUsdPerLb: number;
+    marketPriceUsdPerLb: number;
+    effectivePriceUsdPerLb: number;
+    grossRevenueUsd: number;
+    productionCostUsd: number;
+    projectedProfitUsd: number;
+    farmerProfitUsd: number;
+    partnerProfitUsd: number;
+    investmentTicketUsd: number | null;
+    partnerReturnTotalUsd: number | null;
+    farmerShareBps: number;
+    partnerShareBps: number;
+    parchmentToOroFactor: number;
     formula: string;
   };
   evidenceHash: string;
@@ -194,14 +212,28 @@ interface SnapshotLotInput {
   gpsLng?: string | number | null;
   polygon?: unknown;
   numTrees?: number | null;
+  plantAgeYears?: number | null;
+  investmentTicketCents?: number | null;
+  productionCostCents?: number | null;
+  marketPriceCentsPerLb?: number | null;
+  floorPriceCentsPerLb?: number | null;
+  farmerShareBps?: number | null;
+  partnerShareBps?: number | null;
   harvestYear?: number | null;
 }
 
-const SCORE_VERSION = "sentinel-v0.2.0";
-const LIVE_SCORE_VERSION = "sentinel-live-v0.3.0";
+const SCORE_VERSION = "sentinel-v0.3.0";
+const LIVE_SCORE_VERSION = "sentinel-live-v0.4.0";
 const DEMO_SIGNER = "harvverse-sentinel-demo-signer";
 const LIVE_SIGNER = "harvverse-sentinel-worker";
 const HECTARES_PER_MANZANA = 0.6989;
+const EXPECTED_PLANTS_PER_MANZANA = 2500;
+const PARCHMENT_TO_ORO_FACTOR = 1.2;
+const DEFAULT_FLOOR_PRICE_USD_PER_LB = 3;
+const DEFAULT_MARKET_PRICE_USD_PER_LB = 4;
+const DEFAULT_PRODUCTION_COST_USD = 1279;
+const FARMER_SHARE_BPS = 6000;
+const PARTNER_SHARE_BPS = 4000;
 
 function toNumber(value: string | number | null | undefined): number | null {
   if (value == null) return null;
@@ -497,9 +529,32 @@ function floweringPeakNdvi(points: NdviYieldPoint[], preferredYear: number | nul
   return Number(Math.max(...candidates).toFixed(3));
 }
 
-function expectedPlantsPerManzana(altitudeBand: AltitudeYieldBand) {
-  if (altitudeBand === "very_high" || altitudeBand === "extreme") return 1600;
-  return 1800;
+function maturityFactor(ageYears: number | null) {
+  if (ageYears == null || ageYears < 0) {
+    return { factor: 1, renewalFlag: false };
+  }
+  if (ageYears < 2) return { factor: 0, renewalFlag: false };
+  if (ageYears < 3) return { factor: 0.2, renewalFlag: false };
+  if (ageYears < 4) return { factor: 0.5, renewalFlag: false };
+  if (ageYears < 5) return { factor: 0.8, renewalFlag: false };
+  if (ageYears < 6) return { factor: 0.95, renewalFlag: false };
+  if (ageYears <= 15) return { factor: 1, renewalFlag: false };
+  if (ageYears <= 20) {
+    return {
+      factor: Number(lerp(ageYears, 16, 20, 1, 0.75).toFixed(2)),
+      renewalFlag: false,
+    };
+  }
+  return { factor: 0.65, renewalFlag: true };
+}
+
+function toUsd(value: number) {
+  return Number(value.toFixed(2));
+}
+
+function centsToUsd(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  return Number((value / 100).toFixed(2));
 }
 
 function buildYieldPredict({
@@ -526,7 +581,6 @@ function buildYieldPredict({
     season == null
       ? 1
       : Number(clamp(season.auc / ndviBenchmarkAuc, 0.7, 1.25).toFixed(2));
-  const expectedPlants = expectedPlantsPerManzana(altitudeBand);
   const plantsPerManzana =
     lot.numTrees != null && areaManzanas > 0
       ? Number((lot.numTrees / areaManzanas).toFixed(0))
@@ -534,11 +588,41 @@ function buildYieldPredict({
   const densityModifier =
     plantsPerManzana == null
       ? 1
-      : Number(clamp(plantsPerManzana / expectedPlants, 0.75, 1.15).toFixed(2));
+      : Number(clamp(plantsPerManzana / EXPECTED_PLANTS_PER_MANZANA, 0.75, 1.15).toFixed(2));
+  const maturity = maturityFactor(lot.plantAgeYears ?? null);
   const projectedQuintales = Number(
-    (areaManzanas * baseYieldQqPerManzana * ndviModifier * densityModifier).toFixed(1),
+    (
+      areaManzanas *
+      baseYieldQqPerManzana *
+      maturity.factor *
+      ndviModifier *
+      densityModifier
+    ).toFixed(1),
   );
   const floweringPeak = floweringPeakNdvi(ndviSeries, season?.year ?? null);
+  const projectedOroQuintales = Number((projectedQuintales / PARCHMENT_TO_ORO_FACTOR).toFixed(1));
+  const projectedOroLbs = Number((projectedOroQuintales * 100).toFixed(1));
+  const floorPriceUsdPerLb =
+    centsToUsd(lot.floorPriceCentsPerLb) ?? DEFAULT_FLOOR_PRICE_USD_PER_LB;
+  const marketPriceUsdPerLb =
+    centsToUsd(lot.marketPriceCentsPerLb) ?? DEFAULT_MARKET_PRICE_USD_PER_LB;
+  const effectivePriceUsdPerLb = Math.max(
+    marketPriceUsdPerLb,
+    floorPriceUsdPerLb,
+  );
+  const productionCostUsd =
+    centsToUsd(lot.productionCostCents) ?? DEFAULT_PRODUCTION_COST_USD;
+  const investmentTicketUsd = centsToUsd(lot.investmentTicketCents);
+  const farmerShareBps = lot.farmerShareBps ?? FARMER_SHARE_BPS;
+  const partnerShareBps = lot.partnerShareBps ?? PARTNER_SHARE_BPS;
+  const grossRevenueUsd = toUsd(projectedOroLbs * effectivePriceUsdPerLb);
+  const projectedProfitUsd = toUsd(grossRevenueUsd - productionCostUsd);
+  const farmerProfitUsd = toUsd(Math.max(projectedProfitUsd, 0) * (farmerShareBps / 10_000));
+  const partnerProfitUsd = toUsd(Math.max(projectedProfitUsd, 0) * (partnerShareBps / 10_000));
+  const partnerReturnTotalUsd =
+    investmentTicketUsd == null
+      ? null
+      : toUsd(investmentTicketUsd + partnerProfitUsd);
 
   return {
     projectedQuintales,
@@ -550,7 +634,7 @@ function buildYieldPredict({
         : "medium",
     investmentArgument:
       `YieldPredict uses ${areaManzanas.toFixed(2)} mz × ${baseYieldQqPerManzana.toFixed(1)} qq/mz ` +
-      `(${varietyKey}/${altitudeBand}) × NDVI May-Sep ${ndviModifier.toFixed(2)}x ` +
+      `(${varietyKey}/${altitudeBand}) × maturity ${maturity.factor.toFixed(2)}x × NDVI May-Sep ${ndviModifier.toFixed(2)}x ` +
       `× density ${densityModifier.toFixed(2)}x to estimate the next harvest.`,
     baseYieldQqPerManzana,
     varietyKey,
@@ -559,11 +643,29 @@ function buildYieldPredict({
     ndviBenchmarkAuc,
     ndviModifier,
     floweringPeakNdvi: floweringPeak,
+    maturityFactor: maturity.factor,
+    plantAgeYears: lot.plantAgeYears ?? null,
+    renewalFlag: maturity.renewalFlag,
     densityModifier,
     plantsPerManzana,
-    expectedPlantsPerManzana: expectedPlants,
+    expectedPlantsPerManzana: EXPECTED_PLANTS_PER_MANZANA,
+    projectedOroQuintales,
+    projectedOroLbs,
+    floorPriceUsdPerLb,
+    marketPriceUsdPerLb,
+    effectivePriceUsdPerLb,
+    grossRevenueUsd,
+    productionCostUsd,
+    projectedProfitUsd,
+    farmerProfitUsd,
+    partnerProfitUsd,
+    investmentTicketUsd,
+    partnerReturnTotalUsd,
+    farmerShareBps,
+    partnerShareBps,
+    parchmentToOroFactor: PARCHMENT_TO_ORO_FACTOR,
     formula:
-      "area_mz * base_yield_qq_per_mz(variety+altitude) * ndvi_may_sep_auc_modifier * plant_density_modifier",
+      "area_mz * base_yield_qq_per_mz(variety+altitude) * maturity_factor * ndvi_may_sep_auc_modifier * plant_density_modifier",
   };
 }
 

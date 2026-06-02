@@ -11,7 +11,7 @@ import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { CopernicusSectionHeader } from "./copernicus-ui";
 
-const DEMO_WHATSAPP = "+19063794460";
+const DEMO_WHATSAPP = process.env.NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER?.trim() ?? "";
 
 export function CopernicusQrPanel({ lotCode }: { lotCode: string }) {
   const t = useTranslations("copernicus");
@@ -31,9 +31,13 @@ export function CopernicusQrPanel({ lotCode }: { lotCode: string }) {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  const whatsappHref = `https://wa.me/${DEMO_WHATSAPP.replace(/\D/g, "")}?text=${encodeURIComponent(
-    t("whatsapp_share_text", { url: publicUrl, code: lotCode }),
-  )}`;
+  const whatsappDigits = DEMO_WHATSAPP.replace(/\D/g, "");
+  const whatsappHref =
+    whatsappDigits.length > 0
+      ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
+          t("whatsapp_share_text", { url: publicUrl, code: lotCode }),
+        )}`
+      : null;
 
   return (
     <GlassCard className="border-primary/25 p-5">
@@ -61,18 +65,22 @@ export function CopernicusQrPanel({ lotCode }: { lotCode: string }) {
             {copied ? <Check className="mr-2 size-4" /> : <Copy className="mr-2 size-4" />}
             {copied ? t("qr_copied") : t("qr_copy")}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-full border-white/15 text-white hover:bg-white/10"
-            asChild
-          >
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
-              {t("whatsapp_cta")}
-            </a>
-          </Button>
-          <p className="text-[10px] text-white/35">{t("whatsapp_number_note")}</p>
+          {whatsappHref ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full border-white/15 text-white hover:bg-white/10"
+                asChild
+              >
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                  {t("whatsapp_cta")}
+                </a>
+              </Button>
+              <p className="text-[10px] text-white/35">{t("whatsapp_number_note")}</p>
+            </>
+          ) : null}
         </div>
       </div>
     </GlassCard>

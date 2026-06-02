@@ -212,7 +212,7 @@ export default function PublicFarmDetailPage() {
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 flex items-center gap-2">
                     <Layers className="size-3 text-primary" /> {tf("label_area")}
                   </p>
-                  <p className="text-lg font-bold text-white/80">{farm.areaManzanas ? `${Number(farm.areaManzanas).toFixed(1)} ${tf("label_hectares")}` : "—"}</p>
+                  <p className="text-lg font-bold text-white/80">{farm.areaManzanas ? `${Number(farm.areaManzanas).toFixed(1)} ${tf("unit_mzn")}` : "—"}</p>
                 </div>
               </div>
 

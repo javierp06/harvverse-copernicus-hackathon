@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import dotenv from "dotenv";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 dotenv.config({ path: path.join(repoRoot, "apps/web/.env"), quiet: true });
@@ -21,7 +21,9 @@ const { DEMO_LOT_CODE, DEMO_LOT_POLYGON } = await import(
   "../packages/db/src/demo-lot-fixtures.ts"
 );
 const { db } = await import("../packages/db/src/index.ts");
-const { lots, copernicusSnapshots, farms } = await import("../packages/db/src/schema/index.ts");
+const { lots, copernicusSnapshots, farms, plans } = await import(
+  "../packages/db/src/schema/index.ts"
+);
 const { buildFixtureCopernicusSnapshot, buildLiveCopernicusSnapshot } = await import(
   "../packages/api/src/lib/copernicus.ts"
 );
@@ -30,6 +32,48 @@ const { getSentinelHubCredentials, getSentinelHubToken } = await import(
 );
 
 type CopernicusLotSnapshot = Awaited<ReturnType<typeof buildFixtureCopernicusSnapshot>>;
+
+async function getApprovedPlanEconomics(lot: typeof lots.$inferSelect) {
+  const activePlan =
+    lot.activePlanCode == null
+      ? null
+      : await db.query.plans.findFirst({
+          where: and(
+            eq(plans.planCode, lot.activePlanCode),
+            eq(plans.status, "approved_for_demo"),
+          ),
+        });
+
+  const lotPlan =
+    activePlan ??
+    (await db.query.plans.findFirst({
+      where: and(eq(plans.lotId, lot.id), eq(plans.status, "approved_for_demo")),
+      orderBy: [desc(plans.createdAt)],
+    }));
+
+  const codePlan =
+    lotPlan ??
+    (lot.code == null
+      ? null
+      : await db.query.plans.findFirst({
+          where: and(
+            eq(plans.lotCode, lot.code),
+            eq(plans.status, "approved_for_demo"),
+          ),
+          orderBy: [desc(plans.createdAt)],
+        }));
+
+  if (!codePlan) return {};
+
+  return {
+    investmentTicketCents: codePlan.ticketCents,
+    productionCostCents: codePlan.agronomicCostCents,
+    marketPriceCentsPerLb: codePlan.priceCentsPerLb,
+    floorPriceCentsPerLb: codePlan.priceFloorCentsPerLb,
+    farmerShareBps: codePlan.splitFarmerBps,
+    partnerShareBps: codePlan.splitPartnerBps,
+  };
+}
 
 async function persistCopernicusSnapshot(snapshot: CopernicusLotSnapshot) {
   return db.transaction(async (tx) => {
@@ -127,6 +171,7 @@ async function main() {
     polygon: DEMO_LOT_POLYGON,
     numTrees: lot.numTrees,
     harvestYear: lot.harvestYear,
+    ...(await getApprovedPlanEconomics(lot)),
   };
 
   let snapshot: CopernicusLotSnapshot;

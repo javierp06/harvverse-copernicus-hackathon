@@ -5,6 +5,7 @@ import {
   plans,
   users,
 } from "@harvverse-copernicus-hackathon/db/schema";
+import type { Db } from "@harvverse-copernicus-hackathon/db";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -12,6 +13,21 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../index";
 
 const planStatusSchema = z.enum(planStatusEnum.enumValues);
+
+async function refreshLotActivePlan(db: Db, lotId: number) {
+  const activePlan = await db.query.plans.findFirst({
+    where: and(eq(plans.lotId, lotId), ne(plans.status, "revoked")),
+    orderBy: [desc(plans.createdAt)],
+  });
+
+  await db
+    .update(lots)
+    .set({
+      activePlanCode: activePlan?.planCode ?? null,
+      updatedAt: new Date(),
+    })
+    .where(eq(lots.id, lotId));
+}
 
 export const plansRouter = router({
   byLotId: protectedProcedure
@@ -70,6 +86,9 @@ export const plansRouter = router({
           message: "Failed to create plan",
         });
       }
+      if (plan.lotId != null) {
+        await refreshLotActivePlan(ctx.db, plan.lotId);
+      }
       return plan;
     }),
 
@@ -106,6 +125,9 @@ export const plansRouter = router({
         .returning();
       if (!plan) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
+      }
+      if (plan.lotId != null) {
+        await refreshLotActivePlan(ctx.db, plan.lotId);
       }
       return plan;
     }),
@@ -146,6 +168,9 @@ export const plansRouter = router({
         .returning();
       if (!plan) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
+      }
+      if (plan.lotId != null) {
+        await refreshLotActivePlan(ctx.db, plan.lotId);
       }
       return plan;
     }),

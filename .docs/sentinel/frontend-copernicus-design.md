@@ -2,7 +2,7 @@
 
 **Estado:** Fase 1 implementada y validada — ver [frontend-phase1-validation.md](./frontend-phase1-validation.md)  
 **Fecha:** 2025-06-01 · **Última actualización:** acuerdos Javier + WhatsApp demo  
-**Alcance:** UI que hace visible, escaneable y convincente la prueba Copernicus (sin integración n8n en este documento, salvo handoff WhatsApp).
+**Alcance:** UI que hace visible, escaneable y convincente la prueba Copernicus (sin implementar AI SDK en frontend; solo handoff WhatsApp).
 
 ---
 
@@ -31,7 +31,7 @@ Implementar la capa de presentación del hackathon **Harvverse Sentinel** para q
 | Dashboard partner | `dashboard/player` | **~15%** | Métricas de partnerships/inversión, **no** widgets Copernicus. |
 | Tarjeta agricultor (elegibilidad) | `dashboard/farmer/lots/[lotId]` | **~55%** | Bloque Copernicus inline; falta tarjeta de estado unificada (elegible / bloqueado / pendiente revisión). |
 | Tipos / parsing snapshot | Inline en `lot/[code]/page.tsx` | **Deuda** | `asSnapshot` local ~150 líneas; conviene librería compartida. |
-| Webhook n8n (Sheyla) | `/api/sentinel/alerts` | **Listo (contrato)** | No es UI; documentamos handoff para DIGEX. |
+| Sentinel Agent + WhatsApp worker (Sheyla) | `/api/sentinel/alerts` | **Listo (contrato)** | No es UI; documentamos handoff para DIGEX. |
 | API directorio | `farms.listPublic` | **Parcial** | Devuelve `lots` anidados; columnas `riskScore`, `eudrStatus` existen en tabla `lots` si Javier/seed las pobló. |
 | API listado lotes | `lots.list` | **OK** | Incluye filas completas de `lots` (incl. score denormalizado). |
 
@@ -48,7 +48,7 @@ Implementar la capa de presentación del hackathon **Harvverse Sentinel** para q
 | **Lote QR / pitch** | `HV-HN-ZAF-L02` (Finca Zafiro). Ignorar fixtures viejos (`testlot`, etc.). |
 | **Seed** | `pnpm db:seed` crea finca + lote `available`; **no** garantiza snapshot Copernicus. Snapshot vía `lots.computeCopernicusSnapshot` o creación de lote con polígono en UI. |
 | **setup:demo** | Registra on-chain y score desde sample JSON; BD `chain.metadataStatus: written` solo tras `lots.markLocalCopernicusProof` (UI o script). UI puede mostrar **pending** hasta entonces. |
-| **scoreVersion** | Fixture: `sentinel-v0.2.0` · Live: `sentinel-live-v0.3.0`. Javier alineará `.docs/sentinel/sample-copernicus-snapshot.json` (hoy aún dice `v0.1.0`). |
+| **scoreVersion** | Fixture: `sentinel-v0.3.0` · Live: `sentinel-live-v0.4.0`. `.docs/sentinel/sample-copernicus-snapshot.json` ya está alineado. |
 | **variables[].key** | Congeladas durante el hackathon; Javier avisa antes de renombrar. |
 | **Payload** | Widgets usan **`copernicusSnapshot` JSONB completo**; campos live avanzados opcionales con fallbacks. |
 | **eligibleForInvestment** | Desde snapshot: fixture `EUDR verified && riskScore >= 60`; live `eudrGate.eligibleForMarketplace && riskScore >= 60`. EUDR `non_compliant` bloquea. |
@@ -80,8 +80,8 @@ El QR `/lot/[code]` no se rompe si el lote pasa a reservado, activo o liquidado;
 
 | Campo | Valor |
 |-------|--------|
-| **Número provisional** | `+19063794460` (E.164; puede cambiar — actualizar runbook/UI cuando llegue el definitivo) |
-| **n8n / hosting** | Lo define Jesús; no bloquea UI |
+| **Número provisional** | `NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER` opcional (E.164); si no existe, el CTA se oculta. |
+| **WhatsApp worker / AI SDK** | Sheyla consume endpoints Sentinel Agent y conecta proveedor WhatsApp; no bloquea UI. |
 | **Webhook** | `POST /api/sentinel/alerts` (contrato en repo) |
 
 ---
@@ -193,14 +193,14 @@ apps/web/src/
 
 ---
 
-### 5.5 DIGEX / Experenta — WhatsApp y handoff n8n
+### 5.5 DIGEX / Experenta — WhatsApp y handoff AI SDK
 
 **Alcance de Jesús/DIGEX en este sprint:** documentación operativa + prueba del webhook, no implementar Meta Cloud API en el repo (responsabilidad de infra DIGEX + flujos Sheyla).
 
 | Entregable doc | Contenido |
 |----------------|-----------|
 | **Runbook WhatsApp** | Número demo, plantillas ES farmer/partner (tomar de `start-handoff.md`), opt-in, límites Meta. |
-| **Contrato webhook** | `POST /api/sentinel/alerts` — eventos: `score.calculated`, `eudr.blocked`, `partner.snapshot_ready`, etc. Payload ejemplo en `fixtures/n8n/`. |
+| **Contrato alertas** | `GET /api/sentinel/agent/context`, `GET /api/sentinel/agent/knowledge`, `POST /api/sentinel/agent/scenarios` y `POST /api/sentinel/alerts`. |
 | **Checklist integración** | URL pública (ngrok/Cloudflare tunnel en dev), secret header si se añade, prueba con `curl` desde doc. |
 | **Enlaces UI → WhatsApp** | Opcional post-MVP: en página QR “Recibir alertas” → wa.me con texto prellenado (solo si DIGEX entrega número). |
 
@@ -245,7 +245,7 @@ flowchart LR
 |--------|-------------|-------------|-------------|
 | `lots.publicByCode` — statuses públicos ampliados | **Hecho** | Javier | `available` \| `reserved` \| `active` \| `settled`; ver §2.1. |
 | `farms.listPublic` — columnas score en lotes | **No (si Drizzle ya las trae)** | — | Usar `farm.lots[].riskScore`, `eudrStatus`, etc. |
-| Actualizar `sample-copernicus-snapshot.json` | **Sí** | Javier | Alinear `scoreVersion` y campos con v0.2.0. |
+| Actualizar `sample-copernicus-snapshot.json` | **Hecho** | Javier | Alineado con fixture `sentinel-v0.3.0` y live `sentinel-live-v0.4.0`. |
 | Mover `lot/[code]` a `(public)` + Clerk | **Sí** | Jesús | Ruta QR sin `AppShell`. |
 | Explorador de tx | **No** | — | Solo hash corto + label Hardhat 31337. |
 
@@ -262,10 +262,10 @@ flowchart LR
 - [ ] **Partner home** (`dashboard/player`): ¿widgets Copernicus o solo `lots/[lotId]`?
 - [ ] **`investments/[id]`:** ¿panel Copernicus en MVP?
 
-### 8.2 WhatsApp / n8n
+### 8.2 WhatsApp / AI SDK
 
-- [x] **Número demo provisional:** `+19063794460` (sujeto a cambio).
-- [ ] **n8n:** URL/hosting — Jesús lo pasa cuando esté.
+- [x] **Número demo opcional:** `NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER` (sujeto a cambio; si no existe, se oculta el CTA).
+- [ ] **AI SDK/worker:** Sheyla conecta los endpoints Sentinel Agent y el proveedor WhatsApp.
 - [ ] **Webhook secret** (opcional): definir si `SENTINEL_WEBHOOK_SECRET` en prod.
 
 ### 8.3 Javier — resuelto (ver §2.1)
@@ -308,7 +308,7 @@ flowchart LR
 
 - `packages/api/src/lib/copernicus.ts` (motor de score)
 - Contratos Solidity
-- Flujos n8n (repo externo)
+- WhatsApp worker / AI SDK (rama de Sheyla)
 
 ---
 

@@ -13,7 +13,7 @@ import {
 } from "@harvverse-copernicus-hackathon/ui/components/chart";
 
 import { CopernicusSectionHeader } from "./copernicus-ui";
-import { numberValue, type CopernicusSnapshotView } from "@/lib/copernicus-snapshot";
+import { metricValue, type CopernicusSnapshotView } from "@/lib/copernicus-snapshot";
 
 const chartConfig = {
   ndvi: { label: "NDVI", color: "#67E8F9" },
@@ -21,7 +21,7 @@ const chartConfig = {
 
 export function CopernicusNdviCard({ snapshot }: { snapshot: CopernicusSnapshotView }) {
   const t = useTranslations("copernicus");
-  const current = numberValue(snapshot.sentinel2.currentNdvi);
+  const current = snapshot.sentinel2.currentNdvi;
   const average = snapshot.sentinel2.twoYearAverageNdvi;
   const series = (snapshot.sentinel2.historicalSeries ?? []).slice(-24);
   const chartData = series.map((point) => ({
@@ -32,10 +32,10 @@ export function CopernicusNdviCard({ snapshot }: { snapshot: CopernicusSnapshotV
   let trendLabel = t("ndvi_trend_stable");
   let TrendIcon = Minus;
   if (average != null) {
-    if (current > average + 0.03) {
+    if (current != null && current > average + 0.03) {
       trendLabel = t("ndvi_trend_up");
       TrendIcon = TrendingUp;
-    } else if (current < average - 0.03) {
+    } else if (current != null && current < average - 0.03) {
       trendLabel = t("ndvi_trend_down");
       TrendIcon = TrendingDown;
     }
@@ -49,7 +49,7 @@ export function CopernicusNdviCard({ snapshot }: { snapshot: CopernicusSnapshotV
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/45">{t("ndvi_current")}</p>
           <p className="mt-1 flex items-center gap-2 text-3xl font-black text-primary">
             <Leaf className="size-5" />
-            {current.toFixed(2)}
+            {metricValue(current, 2)}
           </p>
         </div>
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">

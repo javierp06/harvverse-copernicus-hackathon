@@ -1,34 +1,45 @@
 {
   "lotId": 101,
   "farmId": 11,
-  "lotCode": "HV-HN-ZAF-L02",
-  "farmName": "Finca Zafiro",
-  "region": "San Sebastian, La Paz",
-  "country": "Honduras",
   "polygon": {
     "type": "Polygon",
     "coordinates": [
       [
-        [-87.961, 14.246],
-        [-87.959, 14.246],
-        [-87.959, 14.244],
-        [-87.961, 14.244],
-        [-87.961, 14.246]
+        [
+          -87.961,
+          14.246
+        ],
+        [
+          -87.959,
+          14.246
+        ],
+        [
+          -87.959,
+          14.244
+        ],
+        [
+          -87.961,
+          14.244
+        ],
+        [
+          -87.961,
+          14.246
+        ]
       ]
     ]
   },
   "sourceMode": "fixture",
-  "scoreVersion": "sentinel-v0.1.0",
-  "riskScore": 85,
+  "scoreVersion": "sentinel-v0.3.0",
+  "riskScore": 88,
   "riskTier": "excellent",
   "eudrStatus": "verified",
   "eligibleForInvestment": true,
   "variables": [
     {
       "key": "sentinel2_current_ndvi",
-      "label": "Sentinel-2 current NDVI",
-      "value": 0.74,
-      "score": 88,
+      "label": "Sentinel-2 optical canopy health",
+      "value": "NDVI 0.723 / NDRE 0.421 / NDWI 0.262",
+      "score": 99,
       "weight": 20,
       "source": "sentinel-2"
     },
@@ -36,14 +47,14 @@
       "key": "sentinel2_ndvi_stability",
       "label": "Sentinel-2 two-year stability",
       "value": "stable canopy",
-      "score": 84,
+      "score": 82,
       "weight": 10,
       "source": "sentinel-2"
     },
     {
       "key": "sentinel1_moisture",
-      "label": "Sentinel-1 SAR moisture proxy",
-      "value": "medium",
+      "label": "Sentinel-1 SAR structure and moisture",
+      "value": "medium · VH/VV 0.25 · RVI 0.80",
       "score": 76,
       "weight": 10,
       "source": "sentinel-1"
@@ -51,16 +62,16 @@
     {
       "key": "era5_rainfall_fit",
       "label": "ERA5 annual rainfall fit",
-      "value": 1740,
-      "score": 86,
+      "value": 1725,
+      "score": 84,
       "weight": 15,
       "source": "era5"
     },
     {
       "key": "era5_temperature_distribution",
       "label": "ERA5 seasonal temperature risk",
-      "value": 20.8,
-      "score": 80,
+      "value": 21.6,
+      "score": 78,
       "weight": 10,
       "source": "era5"
     },
@@ -76,7 +87,7 @@
       "key": "polygon_terrain_suitability",
       "label": "Polygon altitude and area suitability",
       "value": "1310 masl / 4.2 manzanas",
-      "score": 79,
+      "score": 80,
       "weight": 15,
       "source": "polygon"
     }
@@ -92,7 +103,7 @@
         "to": "2026-05-26"
       },
       "resolution": "10m",
-      "notes": "NDVI fixture follows the live Sentinel-2 L2A Statistics API contract with SCL cloud and shadow masking."
+      "notes": "Optical fixture follows the live Sentinel-2 L2A Statistics API contract for NDVI, NDRE, NDWI, and MSI with SCL cloud and shadow masking."
     },
     {
       "key": "sentinel-1",
@@ -104,7 +115,7 @@
         "to": "2026-05-26"
       },
       "resolution": "10m",
-      "notes": "SAR fixture preserves the VV/VH and moisture-proxy fields expected from the live radar path."
+      "notes": "SAR fixture preserves the VV, VH, VH/VV, RVI, and moisture-proxy fields expected from the live radar path."
     },
     {
       "key": "dem",
@@ -158,63 +169,249 @@
     "limitations": [
       "This deterministic demo snapshot is not a final financing decision.",
       "EUDR status must be re-computed from live land-cover evidence before production use.",
-      "Sentinel-1 IW GRD is treated as a contextual proxy for small lots, not a precise parcel-level soil moisture measurement."
+      "Sentinel-1 IW GRD is treated as a contextual proxy for small lots, not a precise parcel-level soil moisture measurement.",
+      "Coffee agroforestry and shade trees can make optical vegetation indices resemble forest; SAR texture and field context remain important."
     ],
     "parcelScale": {
       "areaManzanas": 4.2,
       "areaHectares": 2.94,
       "sentinel2PixelEstimate": 294,
-      "sentinel1IwCellEstimate": 18.3,
+      "sentinel1IwCellEstimate": 18.4,
       "confidence": "high",
       "warning": null
     }
   },
   "sentinel2": {
-    "currentNdvi": 0.74,
-    "twoYearAverageNdvi": 0.71,
+    "currentNdvi": 0.723,
+    "twoYearAverageNdvi": 0.701,
     "historicalSeries": [
       {
-        "month": "2025-12",
-        "ndvi": 0.69,
+        "month": "2024-06",
+        "ndvi": 0.698,
+        "ndre": 0.404,
+        "ndwi": 0.25,
+        "msi": 0.684,
         "validPixelCoverage": 0.78,
-        "cloudCoverage": 0.21
+        "cloudCoverage": 0.16
       },
       {
-        "month": "2026-01",
-        "ndvi": 0.71,
-        "validPixelCoverage": 0.82,
-        "cloudCoverage": 0.17
-      },
-      {
-        "month": "2026-02",
-        "ndvi": 0.73,
-        "validPixelCoverage": 0.84,
-        "cloudCoverage": 0.15
-      },
-      {
-        "month": "2026-03",
-        "ndvi": 0.72,
-        "validPixelCoverage": 0.8,
+        "month": "2024-07",
+        "ndvi": 0.706,
+        "ndre": 0.41,
+        "ndwi": 0.254,
+        "msi": 0.679,
+        "validPixelCoverage": 0.81,
         "cloudCoverage": 0.2
       },
       {
-        "month": "2026-04",
-        "ndvi": 0.73,
+        "month": "2024-08",
+        "ndvi": 0.713,
+        "ndre": 0.415,
+        "ndwi": 0.258,
+        "msi": 0.675,
+        "validPixelCoverage": 0.84,
+        "cloudCoverage": 0.24
+      },
+      {
+        "month": "2024-09",
+        "ndvi": 0.719,
+        "ndre": 0.419,
+        "ndwi": 0.261,
+        "msi": 0.671,
+        "validPixelCoverage": 0.87,
+        "cloudCoverage": 0.16
+      },
+      {
+        "month": "2024-10",
+        "ndvi": 0.722,
+        "ndre": 0.421,
+        "ndwi": 0.262,
+        "msi": 0.669,
+        "validPixelCoverage": 0.78,
+        "cloudCoverage": 0.2
+      },
+      {
+        "month": "2024-11",
+        "ndvi": 0.723,
+        "ndre": 0.421,
+        "ndwi": 0.262,
+        "msi": 0.669,
         "validPixelCoverage": 0.81,
-        "cloudCoverage": 0.18
+        "cloudCoverage": 0.24
+      },
+      {
+        "month": "2024-12",
+        "ndvi": 0.721,
+        "ndre": 0.42,
+        "ndwi": 0.261,
+        "msi": 0.67,
+        "validPixelCoverage": 0.84,
+        "cloudCoverage": 0.16
+      },
+      {
+        "month": "2025-01",
+        "ndvi": 0.716,
+        "ndre": 0.417,
+        "ndwi": 0.259,
+        "msi": 0.673,
+        "validPixelCoverage": 0.87,
+        "cloudCoverage": 0.2
+      },
+      {
+        "month": "2025-02",
+        "ndvi": 0.709,
+        "ndre": 0.412,
+        "ndwi": 0.256,
+        "msi": 0.677,
+        "validPixelCoverage": 0.78,
+        "cloudCoverage": 0.24
+      },
+      {
+        "month": "2025-03",
+        "ndvi": 0.702,
+        "ndre": 0.406,
+        "ndwi": 0.252,
+        "msi": 0.682,
+        "validPixelCoverage": 0.81,
+        "cloudCoverage": 0.16
+      },
+      {
+        "month": "2025-04",
+        "ndvi": 0.693,
+        "ndre": 0.401,
+        "ndwi": 0.248,
+        "msi": 0.687,
+        "validPixelCoverage": 0.84,
+        "cloudCoverage": 0.2
+      },
+      {
+        "month": "2025-05",
+        "ndvi": 0.685,
+        "ndre": 0.395,
+        "ndwi": 0.244,
+        "msi": 0.692,
+        "validPixelCoverage": 0.87,
+        "cloudCoverage": 0.24
+      },
+      {
+        "month": "2025-06",
+        "ndvi": 0.679,
+        "ndre": 0.391,
+        "ndwi": 0.241,
+        "msi": 0.695,
+        "validPixelCoverage": 0.78,
+        "cloudCoverage": 0.16
+      },
+      {
+        "month": "2025-07",
+        "ndvi": 0.675,
+        "ndre": 0.388,
+        "ndwi": 0.238,
+        "msi": 0.698,
+        "validPixelCoverage": 0.81,
+        "cloudCoverage": 0.2
+      },
+      {
+        "month": "2025-08",
+        "ndvi": 0.673,
+        "ndre": 0.387,
+        "ndwi": 0.238,
+        "msi": 0.699,
+        "validPixelCoverage": 0.84,
+        "cloudCoverage": 0.24
+      },
+      {
+        "month": "2025-09",
+        "ndvi": 0.674,
+        "ndre": 0.387,
+        "ndwi": 0.238,
+        "msi": 0.698,
+        "validPixelCoverage": 0.87,
+        "cloudCoverage": 0.16
+      },
+      {
+        "month": "2025-10",
+        "ndvi": 0.678,
+        "ndre": 0.39,
+        "ndwi": 0.24,
+        "msi": 0.696,
+        "validPixelCoverage": 0.78,
+        "cloudCoverage": 0.2
+      },
+      {
+        "month": "2025-11",
+        "ndvi": 0.684,
+        "ndre": 0.394,
+        "ndwi": 0.243,
+        "msi": 0.693,
+        "validPixelCoverage": 0.81,
+        "cloudCoverage": 0.24
+      },
+      {
+        "month": "2025-12",
+        "ndvi": 0.691,
+        "ndre": 0.399,
+        "ndwi": 0.247,
+        "msi": 0.688,
+        "validPixelCoverage": 0.84,
+        "cloudCoverage": 0.16
+      },
+      {
+        "month": "2026-01",
+        "ndvi": 0.699,
+        "ndre": 0.405,
+        "ndwi": 0.251,
+        "msi": 0.683,
+        "validPixelCoverage": 0.87,
+        "cloudCoverage": 0.2
+      },
+      {
+        "month": "2026-02",
+        "ndvi": 0.707,
+        "ndre": 0.411,
+        "ndwi": 0.255,
+        "msi": 0.678,
+        "validPixelCoverage": 0.78,
+        "cloudCoverage": 0.24
+      },
+      {
+        "month": "2026-03",
+        "ndvi": 0.714,
+        "ndre": 0.415,
+        "ndwi": 0.258,
+        "msi": 0.674,
+        "validPixelCoverage": 0.81,
+        "cloudCoverage": 0.16
+      },
+      {
+        "month": "2026-04",
+        "ndvi": 0.72,
+        "ndre": 0.419,
+        "ndwi": 0.261,
+        "msi": 0.671,
+        "validPixelCoverage": 0.84,
+        "cloudCoverage": 0.2
       },
       {
         "month": "2026-05",
-        "ndvi": 0.74,
-        "validPixelCoverage": 0.86,
-        "cloudCoverage": 0.14
+        "ndvi": 0.723,
+        "ndre": 0.421,
+        "ndwi": 0.262,
+        "msi": 0.669,
+        "validPixelCoverage": 0.87,
+        "cloudCoverage": 0.24
       }
     ],
+    "currentNdre": 0.421,
+    "currentNdwi": 0.262,
+    "currentMsi": 0.669,
     "cloudFilter": "Sentinel-2 L2A SCL cloud and shadow mask"
   },
   "sentinel1": {
     "vv": -8.7,
     "vh": -15.4,
+    "vhVvRatio": 0.25,
+    "radarVegetationIndex": 0.8,
     "moistureProxy": "medium",
     "structuralChangeSignal": "none"
   },
@@ -224,8 +421,8 @@
     "terrainSuitability": "excellent"
   },
   "era5": {
-    "annualRainfallMm": 1740,
-    "meanTemperatureC": 20.8,
+    "annualRainfallMm": 1725,
+    "meanTemperatureC": 21.6,
     "seasonalDistribution": "balanced",
     "waterStress": "low"
   },
@@ -248,26 +445,238 @@
     }
   },
   "yieldPredict": {
-    "projectedQuintales": 77.7,
-    "lowBandQuintales": 66.8,
-    "highBandQuintales": 87,
-    "confidence": "high",
-    "investmentArgument": "Stable Sentinel-2 canopy, verified EUDR status, balanced ERA5 rainfall, and suitable Copernicus DEM altitude support escrow-backed co-investment."
+    "projectedQuintales": 76.1,
+    "lowBandQuintales": 60.9,
+    "highBandQuintales": 91.3,
+    "confidence": "medium",
+    "investmentArgument": "YieldPredict uses 4.20 mz × 18.5 qq/mz (default/optimal) × maturity 1.00x × NDVI May-Sep 0.98x × density 1.00x to estimate the next harvest.",
+    "baseYieldQqPerManzana": 18.5,
+    "varietyKey": "default",
+    "altitudeBand": "optimal",
+    "ndviMaySepAuc": 3.386,
+    "ndviBenchmarkAuc": 3.45,
+    "ndviModifier": 0.98,
+    "floweringPeakNdvi": 0.702,
+    "maturityFactor": 1,
+    "plantAgeYears": 6,
+    "renewalFlag": false,
+    "densityModifier": 1,
+    "plantsPerManzana": 2500,
+    "expectedPlantsPerManzana": 2500,
+    "projectedOroQuintales": 63.4,
+    "projectedOroLbs": 6340,
+    "floorPriceUsdPerLb": 2.5,
+    "marketPriceUsdPerLb": 3.5,
+    "effectivePriceUsdPerLb": 3.5,
+    "grossRevenueUsd": 22190,
+    "productionCostUsd": 1490,
+    "projectedProfitUsd": 20700,
+    "farmerProfitUsd": 12420,
+    "partnerProfitUsd": 8280,
+    "investmentTicketUsd": 3425,
+    "partnerReturnTotalUsd": 11705,
+    "farmerShareBps": 6000,
+    "partnerShareBps": 4000,
+    "parchmentToOroFactor": 1.2,
+    "formula": "area_mz * base_yield_qq_per_mz(variety+altitude) * maturity_factor * ndvi_may_sep_auc_modifier * plant_density_modifier"
   },
-  "evidenceHash": "75209eda0c1ff748f3c432cb5a0afa713719c8868614bfa579ae26c8ae53892f",
-  "scoreHash": "75209eda0c1ff748f3c432cb5a0afa713719c8868614bfa579ae26c8ae53892f",
+  "evidenceHash": "1c68033a9ca3d7b7cbd9a14e35518703fc3801f23ba1ffdc4e9179c5976ba98b",
+  "scoreHash": "1c68033a9ca3d7b7cbd9a14e35518703fc3801f23ba1ffdc4e9179c5976ba98b",
   "signedPayload": {
     "payload": {
       "lotId": 101,
       "farmId": 11,
       "lotCode": "HV-HN-ZAF-L02",
-      "scoreVersion": "sentinel-v0.1.0",
-      "riskScore": 85,
+      "scoreVersion": "sentinel-v0.3.0",
+      "riskScore": 88,
       "riskTier": "excellent",
       "eudrStatus": "verified",
-      "eligibleForInvestment": true
+      "eligibleForInvestment": true,
+      "variables": [
+        {
+          "key": "sentinel2_current_ndvi",
+          "label": "Sentinel-2 optical canopy health",
+          "value": "NDVI 0.723 / NDRE 0.421 / NDWI 0.262",
+          "score": 99,
+          "weight": 20,
+          "source": "sentinel-2"
+        },
+        {
+          "key": "sentinel2_ndvi_stability",
+          "label": "Sentinel-2 two-year stability",
+          "value": "stable canopy",
+          "score": 82,
+          "weight": 10,
+          "source": "sentinel-2"
+        },
+        {
+          "key": "sentinel1_moisture",
+          "label": "Sentinel-1 SAR structure and moisture",
+          "value": "medium · VH/VV 0.25 · RVI 0.80",
+          "score": 76,
+          "weight": 10,
+          "source": "sentinel-1"
+        },
+        {
+          "key": "era5_rainfall_fit",
+          "label": "ERA5 annual rainfall fit",
+          "value": 1725,
+          "score": 84,
+          "weight": 15,
+          "source": "era5"
+        },
+        {
+          "key": "era5_temperature_distribution",
+          "label": "ERA5 seasonal temperature risk",
+          "value": 21.6,
+          "score": 78,
+          "weight": 10,
+          "source": "era5"
+        },
+        {
+          "key": "eudr_land_cover_gate",
+          "label": "EUDR post-2020 land-cover gate",
+          "value": "verified",
+          "score": 100,
+          "weight": 20,
+          "source": "eudr"
+        },
+        {
+          "key": "polygon_terrain_suitability",
+          "label": "Polygon altitude and area suitability",
+          "value": "1310 masl / 4.2 manzanas",
+          "score": 80,
+          "weight": 15,
+          "source": "polygon"
+        }
+      ],
+      "sources": [
+        {
+          "key": "sentinel-2",
+          "provider": "Copernicus Data Space Ecosystem / Sentinel Hub",
+          "dataset": "sentinel-2-l2a",
+          "mode": "fixture",
+          "dateRange": {
+            "from": "2024-06-01",
+            "to": "2026-05-26"
+          },
+          "resolution": "10m",
+          "notes": "Optical fixture follows the live Sentinel-2 L2A Statistics API contract for NDVI, NDRE, NDWI, and MSI with SCL cloud and shadow masking."
+        },
+        {
+          "key": "sentinel-1",
+          "provider": "Copernicus Data Space Ecosystem / Sentinel Hub",
+          "dataset": "sentinel-1-grd",
+          "mode": "fixture",
+          "dateRange": {
+            "from": "2024-06-01",
+            "to": "2026-05-26"
+          },
+          "resolution": "10m",
+          "notes": "SAR fixture preserves the VV, VH, VH/VV, RVI, and moisture-proxy fields expected from the live radar path."
+        },
+        {
+          "key": "dem",
+          "provider": "Copernicus DEM",
+          "dataset": "copernicus_dem_glo30",
+          "mode": "fixture",
+          "dateRange": {
+            "from": "2020-01-01",
+            "to": "2026-05-26"
+          },
+          "resolution": "30m",
+          "notes": "Altitude is derived from lot data in fixture mode and will be replaced by DEM centroid sampling in live mode."
+        },
+        {
+          "key": "era5",
+          "provider": "Copernicus Climate Change Service via Open-Meteo Archive",
+          "dataset": "ERA5 reanalysis",
+          "mode": "fixture",
+          "dateRange": {
+            "from": "2024-06-01",
+            "to": "2026-05-26"
+          },
+          "resolution": "daily aggregate",
+          "notes": "Climate fixture matches the annual rainfall, temperature, and stress fields expected from live ERA5 aggregation."
+        },
+        {
+          "key": "eudr",
+          "provider": "Copernicus/JRC reference baseline",
+          "dataset": "JRC Global Forest Cover 2020",
+          "mode": "fixture",
+          "dateRange": {
+            "from": "2020-12-31",
+            "to": "2026-05-26"
+          },
+          "resolution": null,
+          "notes": "EUDR fixture models the post-December 2020 deforestation gate; live mode must replace it with polygon screening evidence."
+        }
+      ],
+      "dataQuality": {
+        "confidence": "medium",
+        "completeness": 0.82,
+        "scoreCap": {
+          "applied": false,
+          "maxScore": null,
+          "reason": null
+        },
+        "warnings": [
+          "Fixture mode: provider calls are not executed yet.",
+          "Local contract metadata write is pending."
+        ],
+        "limitations": [
+          "This deterministic demo snapshot is not a final financing decision.",
+          "EUDR status must be re-computed from live land-cover evidence before production use.",
+          "Sentinel-1 IW GRD is treated as a contextual proxy for small lots, not a precise parcel-level soil moisture measurement.",
+          "Coffee agroforestry and shade trees can make optical vegetation indices resemble forest; SAR texture and field context remain important."
+        ],
+        "parcelScale": {
+          "areaManzanas": 4.2,
+          "areaHectares": 2.94,
+          "sentinel2PixelEstimate": 294,
+          "sentinel1IwCellEstimate": 18.4,
+          "confidence": "high",
+          "warning": null
+        }
+      },
+      "yieldPredict": {
+        "projectedQuintales": 76.1,
+        "lowBandQuintales": 60.9,
+        "highBandQuintales": 91.3,
+        "confidence": "medium",
+        "investmentArgument": "YieldPredict uses 4.20 mz × 18.5 qq/mz (default/optimal) × maturity 1.00x × NDVI May-Sep 0.98x × density 1.00x to estimate the next harvest.",
+        "baseYieldQqPerManzana": 18.5,
+        "varietyKey": "default",
+        "altitudeBand": "optimal",
+        "ndviMaySepAuc": 3.386,
+        "ndviBenchmarkAuc": 3.45,
+        "ndviModifier": 0.98,
+        "floweringPeakNdvi": 0.702,
+        "maturityFactor": 1,
+        "plantAgeYears": 6,
+        "renewalFlag": false,
+        "densityModifier": 1,
+        "plantsPerManzana": 2500,
+        "expectedPlantsPerManzana": 2500,
+        "projectedOroQuintales": 63.4,
+        "projectedOroLbs": 6340,
+        "floorPriceUsdPerLb": 2.5,
+        "marketPriceUsdPerLb": 3.5,
+        "effectivePriceUsdPerLb": 3.5,
+        "grossRevenueUsd": 22190,
+        "productionCostUsd": 1490,
+        "projectedProfitUsd": 20700,
+        "farmerProfitUsd": 12420,
+        "partnerProfitUsd": 8280,
+        "investmentTicketUsd": 3425,
+        "partnerReturnTotalUsd": 11705,
+        "farmerShareBps": 6000,
+        "partnerShareBps": 4000,
+        "parchmentToOroFactor": 1.2,
+        "formula": "area_mz * base_yield_qq_per_mz(variety+altitude) * maturity_factor * ndvi_may_sep_auc_modifier * plant_density_modifier"
+      }
     },
-    "signature": "31e951f914bc910a9250be6db0b7ef55409172e0c81e6392c08a9067425e2a7f",
+    "signature": "131810ba2d49ef0e0d51e86bbc1cd1ef8c1ccafac9dffbabe089ff3076dc2ef9",
     "signer": "harvverse-sentinel-demo-signer"
   },
   "chain": {

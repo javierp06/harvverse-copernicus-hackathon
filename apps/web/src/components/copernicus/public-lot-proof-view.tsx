@@ -9,7 +9,7 @@ import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-c
 import { Skeleton } from "@harvverse-copernicus-hackathon/ui/components/skeleton";
 import { TooltipProvider } from "@harvverse-copernicus-hackathon/ui/components/tooltip";
 
-import { parseCopernicusSnapshot, scoreTone } from "@/lib/copernicus-snapshot";
+import { metricValue, parseCopernicusSnapshot, scoreTone } from "@/lib/copernicus-snapshot";
 import { isGeoJsonPolygon } from "@/lib/geo-polygon";
 import { CopernicusQrPanel } from "./copernicus-qr-panel";
 import { CopernicusSignalsGrid } from "./copernicus-signals-grid";
@@ -174,7 +174,7 @@ export function PublicLotProofView({ data }: { data: PublicLotProofData | null }
                 <span className="pb-2 text-xl font-bold text-white/30">/100</span>
               </div>
               <div
-                className={`mt-3 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase ${scoreTone(snapshot?.riskScore ?? 0)}`}
+                className={`mt-3 inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase ${scoreTone(snapshot?.riskScore)}`}
               >
                 {snapshot ? t(`risk_tier.${snapshot.riskTier}` as "risk_tier.excellent") : t("no_score")}
               </div>
@@ -190,7 +190,7 @@ export function PublicLotProofView({ data }: { data: PublicLotProofData | null }
                   label={t("yield_predict")}
                   value={
                     snapshot
-                      ? `${snapshot.yieldPredict.lowBandQuintales}-${snapshot.yieldPredict.highBandQuintales} ${t("unit_qq")}`
+                      ? `${metricValue(snapshot.yieldPredict.lowBandQuintales, 1)}-${metricValue(snapshot.yieldPredict.highBandQuintales, 1)} ${t("unit_qq")}`
                       : t("pending")
                   }
                 />

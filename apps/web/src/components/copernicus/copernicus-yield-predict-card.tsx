@@ -22,17 +22,17 @@ export function CopernicusYieldPredictCard({ snapshot }: { snapshot: CopernicusS
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <CopernicusMetric
           label={tProof("projected")}
-          value={`${yp.projectedQuintales} ${tProof("unit_qq")}`}
+          value={`${metricValue(yp.projectedQuintales, 1)} ${tProof("unit_qq")}`}
           size="sm"
         />
         <CopernicusMetric
           label={tProof("low_band")}
-          value={`${yp.lowBandQuintales} ${tProof("unit_qq")}`}
+          value={`${metricValue(yp.lowBandQuintales, 1)} ${tProof("unit_qq")}`}
           size="sm"
         />
         <CopernicusMetric
           label={tProof("high_band")}
-          value={`${yp.highBandQuintales} ${tProof("unit_qq")}`}
+          value={`${metricValue(yp.highBandQuintales, 1)} ${tProof("unit_qq")}`}
           size="sm"
         />
       </div>

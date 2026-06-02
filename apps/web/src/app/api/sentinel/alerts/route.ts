@@ -1,6 +1,8 @@
 import { env } from "@harvverse-copernicus-hackathon/env/server";
 import { z } from "zod";
 
+import { requireSentinelAgentRequest } from "../_auth";
+
 const eventTypeSchema = z.enum([
   "copernicus.snapshot.created",
   "risk_score.ready",
@@ -58,6 +60,24 @@ const sentinelEventSchema = z.object({
       highBandQuintales: z.number().optional(),
       ndviModifier: z.number().optional(),
       densityModifier: z.number().optional(),
+      maturityFactor: z.number().optional(),
+      plantAgeYears: z.number().nullable().optional(),
+      renewalFlag: z.boolean().optional(),
+      projectedOroQuintales: z.number().optional(),
+      projectedOroLbs: z.number().optional(),
+      floorPriceUsdPerLb: z.number().optional(),
+      marketPriceUsdPerLb: z.number().optional(),
+      effectivePriceUsdPerLb: z.number().optional(),
+      grossRevenueUsd: z.number().optional(),
+      productionCostUsd: z.number().optional(),
+      projectedProfitUsd: z.number().optional(),
+      farmerProfitUsd: z.number().optional(),
+      partnerProfitUsd: z.number().optional(),
+      investmentTicketUsd: z.number().nullable().optional(),
+      partnerReturnTotalUsd: z.number().nullable().optional(),
+      farmerShareBps: z.number().optional(),
+      partnerShareBps: z.number().optional(),
+      parchmentToOroFactor: z.number().optional(),
     })
     .optional(),
   proof: z
@@ -120,7 +140,10 @@ function normalizeEvent(input: z.infer<typeof sentinelEventSchema>) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireSentinelAgentRequest(request);
+  if (authError) return authError;
+
   return Response.json({
     endpoint: "/api/sentinel/alerts",
     purpose:
@@ -139,6 +162,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = requireSentinelAgentRequest(request);
+  if (authError) return authError;
+
   const body: unknown = await request.json().catch(() => null);
   const parsed = sentinelEventSchema.safeParse(body);
 

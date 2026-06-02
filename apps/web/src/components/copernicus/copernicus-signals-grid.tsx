@@ -6,7 +6,7 @@ import { ChartNoAxesColumn, Leaf, Satellite, Sprout } from "lucide-react";
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 
 import { CopernicusMetric, CopernicusSectionHeader } from "./copernicus-ui";
-import { numberValue, type CopernicusSnapshotView } from "@/lib/copernicus-snapshot";
+import { metricValue, numberValue, type CopernicusSnapshotView } from "@/lib/copernicus-snapshot";
 
 export function CopernicusSignalsGrid({ snapshot }: { snapshot: CopernicusSnapshotView | null }) {
   const t = useTranslations("lot_proof");
@@ -21,7 +21,7 @@ export function CopernicusSignalsGrid({ snapshot }: { snapshot: CopernicusSnapsh
         <CopernicusMetric
           icon={Leaf}
           label={t("metrics.s2_ndvi")}
-          value={snapshot ? numberValue(snapshot.sentinel2.currentNdvi).toFixed(2) : "--"}
+          value={snapshot ? metricValue(snapshot.sentinel2.currentNdvi, 2) : "--"}
           description={t("metric_help.s2_ndvi")}
         />
         <CopernicusMetric
@@ -63,7 +63,7 @@ export function CopernicusSignalsGrid({ snapshot }: { snapshot: CopernicusSnapsh
         <CopernicusMetric
           icon={Sprout}
           label={t("metrics.era5_rainfall")}
-          value={snapshot ? `${numberValue(snapshot.era5.annualRainfallMm)} ${t("unit_mm")}` : "--"}
+          value={snapshot ? `${metricValue(snapshot.era5.annualRainfallMm)} ${t("unit_mm")}` : "--"}
           description={t("metric_help.era5_rainfall")}
         />
         <CopernicusMetric
@@ -71,7 +71,7 @@ export function CopernicusSignalsGrid({ snapshot }: { snapshot: CopernicusSnapsh
           label={t("metrics.dem_altitude")}
           value={
             snapshot
-              ? `${numberValue(snapshot.dem.altitudeMasl)} ${t("unit_masl")}`
+              ? `${metricValue(snapshot.dem.altitudeMasl)} ${t("unit_masl")}`
               : "--"
           }
           description={t("metric_help.dem_altitude")}
