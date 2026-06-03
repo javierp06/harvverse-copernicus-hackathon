@@ -207,7 +207,7 @@ export function ProposalCard({
                   <Button
                     size="sm"
                     className="h-8 w-full border border-green-500/40 bg-green-500/20 text-xs font-bold text-green-300 hover:bg-green-500/30"
-                    onClick={() => router.push(`/lots/${lot.id}` as Route)}
+                    onClick={() => router.push(`/lots/${lot.id}?confirmWallet=1` as Route)}
                   >
                     {t("confirm_wallet_cta")}
                   </Button>

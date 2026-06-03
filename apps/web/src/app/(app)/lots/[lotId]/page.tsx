@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import type { Route } from "next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Polygon } from "geojson";
 import { useTranslations } from "next-intl";
@@ -138,6 +138,7 @@ function shortHash(hash: string | null | undefined) {
 
 export default function LotDetailPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const params = useParams<{ lotId: string }>();
   const lotId = Number(params.lotId);
   const t = useTranslations("lot");
@@ -212,6 +213,17 @@ export default function LotDetailPage() {
     if (!confirmDialogOpen && reserve.step === "error") reserve.reset();
   }, [confirmDialogOpen, reserve]);
 
+  useEffect(() => {
+    if (
+      searchParams.get("confirmWallet") === "1" &&
+      lotProposal?.status === "signed" &&
+      activePlan &&
+      projections
+    ) {
+      setConfirmDialogOpen(true);
+    }
+  }, [activePlan, lotProposal?.status, projections, searchParams]);
+
   const isPartner = !!user && user.role === "partner";
   const canRequest =
     !!activePlan &&
@@ -284,15 +296,6 @@ export default function LotDetailPage() {
       );
     }
 
-    if (lot?.status !== "available") {
-      return (
-        <Button className="bg-primary/50 text-[#001020] font-bold py-6 px-8" disabled>
-          <HandCoins className="w-5 h-5 mr-2" />
-          {t("lot_status", { status: lot?.status ?? "" })}
-        </Button>
-      );
-    }
-
     if (!copernicusEligible) {
       const blockedByEudr = copernicusSnapshot?.eudrStatus === "non_compliant";
       return (
@@ -334,7 +337,16 @@ export default function LotDetailPage() {
           onClick={() => setConfirmDialogOpen(true)}
         >
           <CheckCircle2 className="w-5 h-5 mr-2" />
-          {tpr("approved")}
+          {tpr("confirm_wallet_cta")}
+        </Button>
+      );
+    }
+
+    if (lot?.status !== "available") {
+      return (
+        <Button className="bg-primary/50 text-[#001020] font-bold py-6 px-8" disabled>
+          <HandCoins className="w-5 h-5 mr-2" />
+          {t("lot_status", { status: lot?.status ?? "" })}
         </Button>
       );
     }
@@ -586,12 +598,23 @@ export default function LotDetailPage() {
           {/* Approved proposal confirmation banner */}
           {lotProposal?.status === "signed" && activePlan && projections && (
             <GlassCard className="mt-6 p-6 border-green-500/30 bg-green-500/5">
-              <h3 className="text-lg font-bold text-green-300 mb-2">
-                {tpr("confirm_title")}
-              </h3>
-              <p className="text-sm text-white/80 mb-4">
-                {tpr("confirm_desc", { amount: formatUsdFromCents(activePlan.ticketCents) })}
-              </p>
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-green-300 mb-2">
+                    {tpr("confirm_title")}
+                  </h3>
+                  <p className="text-sm text-white/80">
+                    {tpr("confirm_desc", { amount: formatUsdFromCents(activePlan.ticketCents) })}
+                  </p>
+                </div>
+                <Button
+                  className="bg-green-500/20 border border-green-500/40 text-green-300 font-bold hover:bg-green-500/30"
+                  onClick={() => setConfirmDialogOpen(true)}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  {tpr("confirm_wallet_cta")}
+                </Button>
+              </div>
             </GlassCard>
           )}
 

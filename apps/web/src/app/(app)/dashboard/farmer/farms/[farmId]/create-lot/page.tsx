@@ -53,6 +53,7 @@ import {
   SelectValue,
 } from "@harvverse-copernicus-hackathon/ui/components/select";
 import PolygonInput from "@/components/polygon-input";
+import { LotCoverImagePicker } from "@/components/lot-cover-image-picker";
 import {
   polygonCentroid,
   polygonContainedIn,
@@ -132,7 +133,6 @@ const createLotSchema = z
     scaScoreTenths: z.coerce.number().int().min(0).max(1000).optional(),
     profile: z.string().trim().min(1, "Profile required"),
     summary: z.string().trim().min(1, "Summary required"),
-    coverImageUrl: z.string().url().optional().or(z.literal("")),
     ticketUsd: optionalPositiveNumber,
     pricePerLbUsd: optionalPositiveNumber,
     priceFloorPerLbUsd: optionalPositiveNumber,
@@ -188,6 +188,7 @@ export default function CreateLotPage() {
   const [showPolygonGuide, setShowPolygonGuide] = useState(true);
   const [defineTermsNow, setDefineTermsNow] = useState(false);
   const [submitMode, setSubmitMode] = useState<SubmitMode>("draft");
+  const [coverImage, setCoverImage] = useState<string | null>(null);
   const altitudeRequestKeyRef = useRef<string | null>(null);
   const [detectedAltitude, setDetectedAltitude] = useState<number | null>(null);
   const [altitudeStatus, setAltitudeStatus] = useState<"detected" | "error" | null>(null);
@@ -249,7 +250,6 @@ export default function CreateLotPage() {
       scaScoreTenths: undefined,
       profile: "",
       summary: "",
-      coverImageUrl: "",
       ...DEFAULT_PLAN_TERMS,
     },
   });
@@ -400,7 +400,7 @@ export default function CreateLotPage() {
       scaScoreTenths: values.scaScoreTenths,
       profile: values.profile || undefined,
       summary: values.summary || undefined,
-      coverImages: values.coverImageUrl ? [values.coverImageUrl] : undefined,
+      coverImages: coverImage ? [coverImage] : undefined,
       polygon: lotPolygon ?? undefined,
       status: mode === "publish" ? "available" : "draft",
       plan: mode === "publish" && planResult.success
@@ -1139,24 +1139,15 @@ export default function CreateLotPage() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="coverImageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white/80">{t("cover_image_url")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t("cover_image_placeholder")}
-                      className={inputClasses}
-                      {...field}
-                      value={(field.value as string | number | undefined) ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium text-white/80">Cover image</p>
+                <p className="mt-1 text-xs text-white/45">
+                  Upload a real lot photo for cards and detail views.
+                </p>
+              </div>
+              <LotCoverImagePicker value={coverImage} onChange={setCoverImage} />
+            </div>
 
             <div className="border-b border-white/10 pb-2">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/60">

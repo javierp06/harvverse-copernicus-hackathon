@@ -62,3 +62,4 @@ temp
 
 # Dev artifacts
 .claude/
+.exports/

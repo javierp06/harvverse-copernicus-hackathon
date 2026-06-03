@@ -4,7 +4,16 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { DollarSign, Inbox, LayoutDashboard, LogOut, Plus, Settings, Sprout } from "lucide-react";
+import {
+  BellRing,
+  DollarSign,
+  Inbox,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  Settings,
+  Sprout,
+} from "lucide-react";
 
 import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
@@ -95,6 +104,15 @@ export default function FarmerSidebar({ isMobileOpen, onClose }: Props) {
         >
           <Plus className="size-4" />
           {t("create_farm")}
+        </Button>
+
+        <Button
+          variant="ghost"
+          className={navClasses(isActive("/dashboard/admin/sentinel-demo", false))}
+          onClick={() => navigate("/dashboard/admin/sentinel-demo")}
+        >
+          <BellRing className="size-4" />
+          {t("demo_alerts")}
         </Button>
 
         <Button

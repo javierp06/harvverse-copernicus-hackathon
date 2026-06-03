@@ -40,6 +40,15 @@ const lotStatusSchema = z.enum(lotStatusEnum.enumValues);
 const copernicusSourceModeSchema = z.enum(copernicusSourceModeEnum.enumValues);
 const lotCreateStatusSchema = z.enum(["draft", "available"]);
 const execFileAsync = promisify(execFile);
+const coverImageSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (value) =>
+      z.string().url().safeParse(value).success ||
+      /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value),
+    "Cover image must be a URL or a JPG/PNG/WebP data URL",
+  );
 const publicProofLotStatuses = new Set<string>([
   "available",
   "reserved",
@@ -901,7 +910,7 @@ export const lotsRouter = router({
         process: z.string().trim().optional(),
         profile: z.string().trim().optional(),
         summary: z.string().trim().optional(),
-        coverImages: z.array(z.string().url()).optional(),
+        coverImages: z.array(coverImageSchema).optional(),
         scaScoreTenths: z.number().int().min(0).max(1000).optional(),
         // Section C — agronomic, always editable
         numTrees: z.number().int().min(0).optional(),
