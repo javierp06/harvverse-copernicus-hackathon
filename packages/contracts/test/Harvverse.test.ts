@@ -210,6 +210,36 @@ describe("Harvverse — Finca Zafiro happy path", function () {
           ""
         )
     ).to.be.revertedWith("Per-hectare estimate required");
+
+    await expect(
+      carbonRegistry
+        .connect(admin)
+        .recordCarbonEstimate(
+          LOT_ID,
+          SCORE_HASH,
+          CARBON_HASH,
+          TCO2E_PER_HA_YEAR_BPS,
+          TOTAL_TCO2E_PER_YEAR_BPS,
+          0,
+          CARBON_METHOD_VERSION,
+          ""
+        )
+    ).to.be.revertedWith("Evidence URI required");
+
+    await expect(
+      carbonRegistry
+        .connect(admin)
+        .recordCarbonEstimate(
+          LOT_ID,
+          SCORE_HASH,
+          CARBON_HASH,
+          TCO2E_PER_HA_YEAR_BPS,
+          TOTAL_TCO2E_PER_YEAR_BPS,
+          99,
+          CARBON_METHOD_VERSION,
+          "ipfs://carbon-estimate/finca-zafiro-lot-1"
+        )
+    ).to.be.reverted;
   });
 
   it("rejects invalid Copernicus score metadata", async function () {

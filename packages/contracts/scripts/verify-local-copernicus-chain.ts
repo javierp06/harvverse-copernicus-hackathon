@@ -37,6 +37,12 @@ type CopernicusSnapshot = {
   };
 };
 
+type ValidCarbonCapture = {
+  methodVersion?: string;
+  tCo2ePerHaYear: number;
+  totalTCo2ePerYear: number;
+};
+
 const repoRoot = path.resolve(__dirname, "../../..");
 
 function readJson<T>(filePath: string): T {
@@ -69,14 +75,29 @@ function toBytes32Hash(hash: string) {
   return normalized;
 }
 
-function carbonCaptureFromSnapshot(snapshot: CopernicusSnapshot) {
-  return snapshot.carbonCapture ?? snapshot.signedPayload?.payload?.carbonCapture ?? null;
+function isPositiveFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
-function toBasisPoints(value: number | null | undefined, label: string) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    throw new Error(`${label} must be a positive number.`);
+function carbonCaptureFromSnapshot(snapshot: CopernicusSnapshot): ValidCarbonCapture | null {
+  const raw =
+    snapshot.signedPayload?.payload?.carbonCapture ?? snapshot.carbonCapture ?? null;
+  if (
+    raw == null ||
+    !isPositiveFiniteNumber(raw.tCo2ePerHaYear) ||
+    !isPositiveFiniteNumber(raw.totalTCo2ePerYear)
+  ) {
+    return null;
   }
+
+  return {
+    methodVersion: raw.methodVersion,
+    tCo2ePerHaYear: raw.tCo2ePerHaYear,
+    totalTCo2ePerYear: raw.totalTCo2ePerYear,
+  };
+}
+
+function toBasisPoints(value: number) {
   return Math.round(value * 100);
 }
 
@@ -135,14 +156,8 @@ async function main() {
     carbonCapture == null
       ? null
       : await (async () => {
-          const tCo2ePerHaYearBps = toBasisPoints(
-            carbonCapture.tCo2ePerHaYear,
-            "carbonCapture.tCo2ePerHaYear",
-          );
-          const totalTCo2ePerYearBps = toBasisPoints(
-            carbonCapture.totalTCo2ePerYear,
-            "carbonCapture.totalTCo2ePerYear",
-          );
+          const tCo2ePerHaYearBps = toBasisPoints(carbonCapture.tCo2ePerHaYear);
+          const totalTCo2ePerYearBps = toBasisPoints(carbonCapture.totalTCo2ePerYear);
           const methodVersion = carbonCapture.methodVersion ?? "carbon-screening-v0.1.0";
           const tx = await carbonRegistry.recordCarbonEstimate(
             lotId,

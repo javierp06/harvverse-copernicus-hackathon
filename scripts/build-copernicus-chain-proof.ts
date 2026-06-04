@@ -30,6 +30,12 @@ type Snapshot = {
   };
 };
 
+type ValidCarbonCapture = {
+  methodVersion?: string;
+  tCo2ePerHaYear: number;
+  totalTCo2ePerYear: number;
+};
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 
@@ -66,14 +72,29 @@ function normalizeChainId(value: unknown) {
   return chainId;
 }
 
-function carbonCaptureFromSnapshot(snapshot: Snapshot) {
-  return snapshot.carbonCapture ?? snapshot.signedPayload?.payload?.carbonCapture ?? null;
+function isPositiveFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
-function toBasisPoints(value: number | null | undefined, label: string) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    throw new Error(`${label} must be a positive number.`);
+function carbonCaptureFromSnapshot(snapshot: Snapshot): ValidCarbonCapture | null {
+  const raw =
+    snapshot.signedPayload?.payload?.carbonCapture ?? snapshot.carbonCapture ?? null;
+  if (
+    raw == null ||
+    !isPositiveFiniteNumber(raw.tCo2ePerHaYear) ||
+    !isPositiveFiniteNumber(raw.totalTCo2ePerYear)
+  ) {
+    return null;
   }
+
+  return {
+    methodVersion: raw.methodVersion,
+    tCo2ePerHaYear: raw.tCo2ePerHaYear,
+    totalTCo2ePerYear: raw.totalTCo2ePerYear,
+  };
+}
+
+function toBasisPoints(value: number) {
   return Math.round(value * 100);
 }
 
@@ -150,14 +171,8 @@ const proof = {
             lotId,
             scoreHash,
             carbonHash,
-            tCo2ePerHaYearBps: toBasisPoints(
-              carbonCapture.tCo2ePerHaYear,
-              "carbonCapture.tCo2ePerHaYear",
-            ),
-            totalTCo2ePerYearBps: toBasisPoints(
-              carbonCapture.totalTCo2ePerYear,
-              "carbonCapture.totalTCo2ePerYear",
-            ),
+            tCo2ePerHaYearBps: toBasisPoints(carbonCapture.tCo2ePerHaYear),
+            totalTCo2ePerYearBps: toBasisPoints(carbonCapture.totalTCo2ePerYear),
             state: "estimate_recorded",
             methodVersion: carbonCapture.methodVersion ?? "carbon-screening-v0.1.0",
             evidenceUri: `harvverse://copernicus/${lotCode}/carbon`,

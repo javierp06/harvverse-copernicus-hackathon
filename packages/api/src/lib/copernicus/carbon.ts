@@ -5,7 +5,7 @@ export type CarbonCaptureEstimate = {
   methodVersion: "carbon-screening-v0.1.0";
   mrvStatus: "estimate_only";
   tCo2ePerHaYear: number;
-  totalTCo2ePerYear: number;
+  totalTCo2ePerYear: number | null;
   areaHectares: number | null;
   canopyCoverPct: number | null;
   shadeTreeDensityPerHa: number | null;
@@ -147,7 +147,7 @@ export function buildCarbonCaptureEstimate({
     2,
   );
   const totalTCo2ePerYear =
-    areaHectares == null ? 0 : round(tCo2ePerHaYear * areaHectares, 2);
+    areaHectares == null ? null : round(tCo2ePerHaYear * areaHectares, 2);
   const confidence: CarbonCaptureConfidence =
     sourceMode === "live" && cleanShadeTrees && canopyCoverPct != null
       ? "medium"

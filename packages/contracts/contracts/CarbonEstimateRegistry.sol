@@ -61,6 +61,8 @@ contract CarbonEstimateRegistry is AccessControl {
         require(tCo2ePerHaYearBps > 0, "Per-hectare estimate required");
         require(totalTCo2ePerYearBps > 0, "Total estimate required");
         require(bytes(methodVersion).length > 0, "Method version required");
+        require(uint8(state) <= uint8(CarbonState.Verified), "Invalid carbon state");
+        require(bytes(evidenceUri).length > 0, "Evidence URI required");
 
         _estimates[lotId] = CarbonEstimate({
             lotId: lotId,
