@@ -8,7 +8,6 @@ import { QRCodeSVG } from "qrcode.react";
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
 
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { CopernicusSectionHeader } from "./copernicus-ui";
 
 const DEMO_WHATSAPP = process.env.NEXT_PUBLIC_DEMO_WHATSAPP_NUMBER?.trim() ?? "";
@@ -45,12 +44,9 @@ export function CopernicusQrPanel({ lotCode }: { lotCode: string }) {
 
   return (
     <GlassCard className="border-primary/25 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <QrCode className="size-5 text-primary" />
-          <CopernicusSectionHeader title={t("qr_title")} description={t("qr_help")} />
-        </div>
-        <LanguageSwitcher compact />
+      <div className="flex items-center gap-2">
+        <QrCode className="size-5 text-primary shrink-0" />
+        <CopernicusSectionHeader title={t("qr_title")} description={t("qr_help")} />
       </div>
       <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         {publicUrl ? (

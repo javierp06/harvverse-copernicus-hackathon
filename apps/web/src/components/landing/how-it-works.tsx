@@ -29,13 +29,13 @@ export function LandingHowItWorks() {
   ];
 
   return (
-    <section className="bg-[#F4F7F0] py-24 md:py-32">
+    <section className="bg-[#F4F7F0] py-16 sm:py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="mb-16 text-center">
           <p className="text-[11px] font-bold tracking-[3px] text-primary uppercase mb-4">
             {t("how_eyebrow")}
           </p>
-          <h2 className="text-3xl md:text-5xl font-bold text-[#0F1A24] leading-tight max-w-2xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-[#0F1A24] leading-tight max-w-2xl mx-auto px-2">
             {t("how_headline")}
           </h2>
         </div>

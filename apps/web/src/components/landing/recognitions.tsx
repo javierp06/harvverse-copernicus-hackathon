@@ -23,7 +23,7 @@ export function LandingRecognitions() {
           {recognitions.map((item) => (
             <span
               key={item}
-              className="text-[11px] md:text-sm font-medium text-[#8A9BAC] hover:text-white transition-colors cursor-default whitespace-nowrap"
+              className="max-w-[min(100%,280px)] text-center text-[11px] md:text-sm font-medium text-[#8A9BAC] hover:text-white transition-colors cursor-default sm:max-w-none sm:whitespace-nowrap"
             >
               {item}
             </span>

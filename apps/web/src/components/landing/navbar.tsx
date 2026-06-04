@@ -27,8 +27,8 @@ export function LandingNavbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#0F1A24]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 h-16 md:px-6">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#0F1A24]/80 backdrop-blur-xl safe-top">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 md:px-6">
           <Link href="/" className="flex items-center gap-2">
             <img src="/figma/logo-full.png" alt={t("alt_logo")} className="h-8 w-auto" />
           </Link>
@@ -77,18 +77,13 @@ export function LandingNavbar() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center gap-4">
-            <LanguageSwitcher />
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="border-white/20 text-white hover:bg-white/10"
-            >
-              <Link href={"/login" as Route}>{tn("login")}</Link>
-            </Button>
+          <div className="flex shrink-0 items-center gap-2 md:hidden">
+            <LanguageSwitcher compact />
             <button
-              className="text-white"
+              type="button"
+              aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={isOpen}
+              className="flex size-10 items-center justify-center rounded-lg text-white hover:bg-white/10"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? <X className="size-6" /> : <Menu className="size-6" />}
@@ -105,7 +100,7 @@ export function LandingNavbar() {
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden border-b border-white/10 bg-[#0F1A24] overflow-hidden"
             >
-              <div className="flex flex-col gap-4 p-4">
+              <div className="flex flex-col gap-4 p-4 pb-6">
                 {navLinks.map((link) => (
                   link.external ? (
                     <a
@@ -129,6 +124,25 @@ export function LandingNavbar() {
                     </Link>
                   )
                 ))}
+                <div className="mt-2 flex flex-col gap-3 border-t border-white/10 pt-4">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full border-white/20 text-white hover:bg-white/10 rounded-full"
+                  >
+                    <Link href={"/login" as Route} onClick={() => setIsOpen(false)}>
+                      {tn("login")}
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    className="w-full rounded-full bg-primary font-bold text-[#0F1A24] hover:bg-primary/90"
+                  >
+                    <Link href={"/sign-up" as Route} onClick={() => setIsOpen(false)}>
+                      {t("nav_register_cta")}
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -136,10 +150,10 @@ export function LandingNavbar() {
       </nav>
 
       {/* Mobile Sticky CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0F1A24]/95 p-3 backdrop-blur-xl safe-bottom md:hidden">
         <Button
           asChild
-          className="w-full h-12 bg-primary font-bold text-[#0F1A24] hover:bg-primary/90 shadow-2xl shadow-primary/20"
+          className="h-11 w-full rounded-xl bg-primary font-bold text-[#0F1A24] hover:bg-primary/90 shadow-2xl shadow-primary/20"
         >
           <Link href={"/sign-up" as Route}>{t("nav_register_cta")}</Link>
         </Button>

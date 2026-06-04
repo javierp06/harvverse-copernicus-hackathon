@@ -15,7 +15,7 @@ export function LandingSocialProof() {
 
   return (
     <section className="bg-[#1E3A2F] border-y border-primary/20">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-primary/30">
           {stats.map((stat, i) => (
             <motion.div
@@ -24,12 +24,12 @@ export function LandingSocialProof() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="px-6 py-10 md:py-12 text-center md:text-left flex flex-col justify-center"
+              className="flex flex-col justify-center px-4 py-8 text-center sm:px-6 sm:py-10 md:py-12 md:text-left"
             >
-              <span className="text-3xl md:text-4xl font-bold text-primary mb-2 block">
+              <span className="mb-1.5 block text-2xl font-bold text-primary sm:text-3xl md:text-4xl">
                 {stat.value}
               </span>
-              <span className="text-[12px] md:text-sm text-[#C8E6B0] font-medium leading-tight">
+              <span className="text-[11px] sm:text-xs md:text-sm text-[#C8E6B0] font-medium leading-snug">
                 {stat.label}
               </span>
             </motion.div>

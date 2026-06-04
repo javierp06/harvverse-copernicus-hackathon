@@ -44,6 +44,7 @@ import { formatUsdFromCents } from "@/lib/format";
 import { getSnapshotChain } from "@/lib/chainProof";
 import { CopernicusPartnerPanel } from "@/components/copernicus/copernicus-partner-panel";
 import { useCurrentUser } from "@/hooks/use-auth";
+import { farmBoundaryForLotMap } from "@/lib/geo-polygon";
 import { trpc } from "@/utils/trpc";
 import { useReservePartnership, type ReserveStep } from "@/hooks/use-reserve-partnership";
 import { wagmiConfig } from "@/lib/wagmi";
@@ -408,6 +409,9 @@ export default function LotDetailPage() {
                 ? (lot.farm.polygon as Polygon)
                 : null;
               const displayPolygon = lotPolygon ?? farmPolygon;
+              const farmContextPolygon = lotPolygon
+                ? farmBoundaryForLotMap(farmPolygon, lotPolygon)
+                : null;
               const mapsUrl = (() => {
                 if (lot.gpsLat != null && lot.gpsLng != null) {
                   return `https://www.google.com/maps?q=${lot.gpsLat},${lot.gpsLng}`;
@@ -428,6 +432,8 @@ export default function LotDetailPage() {
                           className="absolute inset-0"
                           color={lotPolygon ? "#93D832" : "#67B9C1"}
                           fillOpacity={lotPolygon ? 0.25 : 0.14}
+                          contextPolygon={farmContextPolygon ?? undefined}
+                          contextColor="#4a9eff"
                           mapLabel={t("lot_boundary")}
                         />
                       </div>

@@ -8,7 +8,8 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const locale = useLocale();
 
   function setLocale(next: "es" | "en") {
-    document.cookie = `locale=${next}; path=/; max-age=31536000`;
+    if (next === locale) return;
+    document.cookie = `locale=${next}; path=/; max-age=31536000; SameSite=Lax`;
     router.refresh();
   }
 

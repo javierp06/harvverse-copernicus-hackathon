@@ -100,7 +100,7 @@ export function FarmCard({ farm }: FarmCardProps) {
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <GlassCard className="group flex flex-col overflow-hidden border-primary/20 transition-all hover:border-primary/50 hover:shadow-primary/5">
-        <div className="relative h-32 md:h-52 overflow-hidden bg-gradient-to-br from-primary/20 to-[#001020]">
+        <div className="relative h-40 sm:h-44 md:h-52 overflow-hidden bg-gradient-to-br from-primary/20 to-[#001020]">
           <AnimatePresence mode="wait">
             {activeImage ? (
               <motion.img
@@ -130,14 +130,14 @@ export function FarmCard({ farm }: FarmCardProps) {
               <button
                 type="button"
                 onClick={prevImage}
-                className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60"
+                className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white opacity-100 md:opacity-0 transition-opacity md:group-hover:opacity-100 hover:bg-black/60"
               >
                 <ChevronLeft className="size-3 md:size-4" />
               </button>
               <button
                 type="button"
                 onClick={nextImage}
-                className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/60"
+                className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-1.5 text-white opacity-100 md:opacity-0 transition-opacity md:group-hover:opacity-100 hover:bg-black/60"
               >
                 <ChevronRight className="size-3 md:size-4" />
               </button>

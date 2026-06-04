@@ -31,6 +31,7 @@ import {
 } from "@harvverse-copernicus-hackathon/ui/components/tooltip";
 
 import { computeEarnings, formatUsdFromCents, formatUsdPrecise, formatUsd } from "@/lib/format";
+import { farmBoundaryForLotMap } from "@/lib/geo-polygon";
 import { asRecord, chainLabel, getSnapshotChain } from "@/lib/chainProof";
 import { CopernicusFarmerStatusCard } from "@/components/copernicus/copernicus-farmer-status-card";
 import { trpc } from "@/utils/trpc";
@@ -48,8 +49,8 @@ function scoreTone(score: number | null | undefined) {
   return "border-red-400/30 bg-red-400/10 text-red-300";
 }
 
-function shortHash(hash: string | null | undefined) {
-  if (!hash) return "Pending";
+function shortHash(hash: string | null | undefined, pendingLabel: string) {
+  if (!hash) return pendingLabel;
   return hash.length > 18 ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : hash;
 }
 
@@ -101,11 +102,12 @@ export default function FarmerLotDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 md:px-0">
+      <div className="mx-auto max-w-5xl px-4 md:px-0">
         <Skeleton className="mb-6 h-10 w-48" />
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Skeleton className="h-64 lg:col-span-2" />
-          <Skeleton className="h-64" />
+        <div className="flex flex-col gap-6">
+          <Skeleton className="h-[320px] w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-96 w-full rounded-2xl" />
         </div>
       </div>
     );
@@ -113,7 +115,7 @@ export default function FarmerLotDetailPage() {
 
   if (!lot) {
     return (
-      <div className="mx-auto max-w-7xl px-4 md:px-0">
+      <div className="mx-auto max-w-5xl px-4 md:px-0">
         <GlassCard className="p-12 text-center border-primary/20">
           <p className="text-white/60">{t("not_found")}</p>
         </GlassCard>
@@ -133,7 +135,7 @@ export default function FarmerLotDetailPage() {
   const era5 = asRecord(copernicusSnapshot?.era5) ?? {};
 
   return (
-    <div className="mx-auto max-w-7xl px-4 md:px-0 text-[#EEEEEE]">
+    <div className="mx-auto max-w-5xl px-4 md:px-0 text-[#EEEEEE]">
       <Button
         variant="ghost"
         className="mb-6 text-white/70 hover:bg-white/5 hover:text-white px-0 md:px-4"
@@ -164,10 +166,10 @@ export default function FarmerLotDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-        <GlassCard className="overflow-hidden border-primary/20 lg:col-span-2">
+      <div className="flex flex-col gap-6">
+        <GlassCard className="overflow-hidden border-primary/20">
           <div className="flex flex-col">
-            <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.02] px-6 py-4">
+            <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.02] px-5 py-4 sm:px-6">
               <h2 className="font-trenda text-base font-bold text-white uppercase tracking-wider">
                 {t("lot_boundary")}
               </h2>
@@ -175,9 +177,17 @@ export default function FarmerLotDetailPage() {
                 {t(`status_${lot.status}` as any)}
               </Badge>
             </div>
-            <div className="h-[320px] bg-black/20">
+            <div className="h-[280px] bg-black/20 sm:h-[360px]">
               {lot.polygon ? (
-                <PolygonDisplayMap polygon={lot.polygon as Polygon} color="#93D832" />
+                <PolygonDisplayMap
+                  polygon={lot.polygon as Polygon}
+                  color="#93D832"
+                  contextPolygon={farmBoundaryForLotMap(
+                    lot.farm?.polygon,
+                    lot.polygon as Polygon,
+                  ) ?? undefined}
+                  contextColor="#4a9eff"
+                />
               ) : (
                 <div className="flex h-full items-center justify-center text-white/30 italic">
                   {t("polygon_fallback")}
@@ -187,10 +197,9 @@ export default function FarmerLotDetailPage() {
           </div>
         </GlassCard>
 
-        <div className="flex flex-col gap-6">
-          <CopernicusFarmerStatusCard lot={lot} snapshotRaw={copernicusSnapshot} />
+        <CopernicusFarmerStatusCard lot={lot} snapshotRaw={copernicusSnapshot} />
 
-        <GlassCard className="p-6 md:p-8 border-primary/20">
+        <GlassCard className="border-primary/20 p-6 sm:p-8">
           <div className="mb-6 flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
@@ -207,7 +216,7 @@ export default function FarmerLotDetailPage() {
 
           {copernicusSnapshot ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className={`rounded-lg border p-3 ${scoreTone(copernicusSnapshot.riskScore)}`}>
                   <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">{t("risk_score")}</p>
                   <p className="mt-1 text-3xl font-black">
@@ -235,7 +244,7 @@ export default function FarmerLotDetailPage() {
                   <span className="text-white/45">{t("dem_altitude")}</span>
                   <span className="font-bold text-white">{metricValue(dem.altitudeMasl, 0)} {t("unit_masl")}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{t("s2_ndvi")}</span>
                     <p className="mt-1 font-mono text-sm text-primary">{metricValue(sentinel2.currentNdvi)}</p>
@@ -268,7 +277,7 @@ export default function FarmerLotDetailPage() {
                     <Fingerprint className="h-3.5 w-3.5" />
                     {t("hash")}
                   </span>
-                  <span className="font-mono text-xs text-primary">{shortHash(copernicusSnapshot.scoreHash)}</span>
+                  <span className="font-mono text-xs text-primary">{shortHash(copernicusSnapshot.scoreHash, t("pending"))}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
                   <span className="text-white/45">{t("local_proof")}</span>
@@ -284,7 +293,7 @@ export default function FarmerLotDetailPage() {
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
                   <span className="text-white/45">{t("transaction")}</span>
-                  <span className="font-mono text-xs text-primary">{shortHash(chainProof.transactionHash)}</span>
+                  <span className="font-mono text-xs text-primary">{shortHash(chainProof.transactionHash, t("pending"))}</span>
                 </div>
               </div>
 
@@ -366,12 +375,12 @@ export default function FarmerLotDetailPage() {
         </GlassCard>
 
         {lot.areaManzanas != null || lot.plantAgeYears != null || lot.harvestYear != null || lot.descriptiveName != null ? (
-          <GlassCard className="p-6 md:p-8 border-primary/20 space-y-8">
+          <GlassCard className="border-primary/20 p-6 sm:p-8 space-y-8">
             <div>
               <h2 className="font-trenda text-base font-bold text-white uppercase tracking-wider mb-6">{t("section_c_title")}</h2>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-6 text-sm sm:grid-cols-3">
                 {lot.descriptiveName != null && (
-                  <div className="col-span-2">
+                  <div className="col-span-2 sm:col-span-3">
                     <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">{t("descriptive_name")}</p>
                     <p className="text-white font-bold">{lot.descriptiveName}</p>
                   </div>
@@ -413,7 +422,7 @@ export default function FarmerLotDetailPage() {
                   </div>
                 )}
                 {lot.varietiesComposition != null && (
-                  <div className="col-span-2">
+                  <div className="col-span-2 sm:col-span-3">
                     <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">{t("varieties_composition")}</p>
                     <p className="text-white font-bold text-xs">{JSON.stringify(lot.varietiesComposition)}</p>
                   </div>
@@ -540,9 +549,9 @@ export default function FarmerLotDetailPage() {
           });
           return (
             <>
-              <GlassCard className="p-6 md:p-8 border-primary/20">
+              <GlassCard className="border-primary/20 p-6 sm:p-8">
                 <h2 className="font-trenda text-base font-bold text-white uppercase tracking-wider mb-6">{tLF("terms_title")}</h2>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-6 text-sm sm:grid-cols-3">
                   <div>
                     <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">{tLF("terms_ticket")}</p>
                     <p className="text-white font-bold text-primary">{formatUsdFromCents(activePlan.ticketCents)}</p>
@@ -610,7 +619,7 @@ export default function FarmerLotDetailPage() {
                 </div>
               </GlassCard>
 
-              <GlassCard className="p-6 md:p-8 bg-emerald-500/5 border-emerald-500/20">
+              <GlassCard className="border-emerald-500/20 bg-emerald-500/5 p-6 sm:p-8">
                 <h2 className="font-trenda text-base font-bold text-emerald-400 uppercase tracking-wider mb-6">{tLF("earnings_title")}</h2>
                 <div className="space-y-4 text-sm">
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
@@ -631,7 +640,7 @@ export default function FarmerLotDetailPage() {
                     <span className="text-white/50 text-xs uppercase tracking-wider">{tLF("earnings_net_profit")}</span>
                     <span className="text-white font-black text-base">{formatUsd(earnings.netProfitUsd)}</span>
                   </div>
-                  <div className="flex justify-between items-center bg-emerald-500/10 -mx-6 md:-mx-8 px-6 md:px-8 py-4 mt-2">
+                  <div className="mt-2 flex items-center justify-between bg-emerald-500/10 -mx-6 px-6 py-4 sm:-mx-8 sm:px-8">
                     <span className="text-emerald-300 font-bold text-xs uppercase tracking-wider">
                       {tLF("earnings_your_share", { pct: farmerSharePct.toFixed(0) })}
                     </span>
@@ -643,7 +652,6 @@ export default function FarmerLotDetailPage() {
             </>
           );
         })()}
-        </div>
       </div>
     </div>
   );

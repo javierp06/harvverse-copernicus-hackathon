@@ -7,6 +7,7 @@ import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
 import AppSidebar from "./app-sidebar";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,12 +16,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#001020] text-white">
       {/* Atmospheric elements */}
-      <div className="atmosphere-blob top-[-10%] right-[-10%] size-[500px] bg-primary/20" />
-      <div className="atmosphere-blob bottom-[5%] left-[-5%] size-[400px] bg-[#67B9C1]/20" />
-      <div className="atmosphere-blob top-[20%] left-[20%] size-[300px] bg-[#6766C4]/10" />
+      <div className="atmosphere-blob top-[-10%] right-[-10%] size-[280px] md:size-[500px] bg-primary/20" />
+      <div className="atmosphere-blob bottom-[5%] left-[-5%] size-[220px] md:size-[400px] bg-[#67B9C1]/20" />
+      <div className="atmosphere-blob top-[20%] left-[20%] hidden size-[300px] bg-[#6766C4]/10 md:block" />
 
       {/* Mobile top bar — hidden on md+ */}
-      <header className="fixed top-0 inset-x-0 h-14 bg-[#000d1a] border-b border-white/5 flex items-center justify-between px-4 z-50 md:hidden">
+      <header className="fixed top-0 inset-x-0 h-14 bg-[#000d1a] border-b border-white/5 flex items-center justify-between px-4 z-50 safe-top md:hidden">
         <button
           type="button"
           aria-label="Open menu"
@@ -32,7 +33,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <Link href="/" className="absolute left-1/2 -translate-x-1/2">
           <img src="/logo-white.png" alt="Harvverse" className="h-7 w-auto" />
         </Link>
-        <UserButton />
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher compact />
+          <UserButton />
+        </div>
       </header>
 
       {/* Backdrop */}
@@ -45,9 +49,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex">
         <AppSidebar isMobileOpen={sidebarOpen} onClose={close} />
-        <main className="flex-1 p-4 md:p-8 pt-[72px] md:pt-8 overflow-y-auto min-h-screen">
-          {children}
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-40 hidden h-14 shrink-0 items-center justify-end gap-3 border-b border-white/5 bg-[#000d1a]/95 px-6 backdrop-blur-md md:flex lg:px-8">
+            <LanguageSwitcher />
+            <UserButton />
+          </header>
+          <main className="min-h-screen flex-1 overflow-y-auto overflow-x-hidden p-4 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:p-6 md:p-8 md:pt-8">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

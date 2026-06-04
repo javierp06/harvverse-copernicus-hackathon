@@ -8,11 +8,11 @@ export function LandingFooter() {
   const t = useTranslations("landing");
 
   return (
-    <footer className="bg-[#0A1218] pt-16 pb-24 md:pb-12 text-white/60">
+    <footer className="bg-[#0A1218] pt-12 sm:pt-16 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-12 text-white/60">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-12 mb-12">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 md:grid-cols-3 sm:gap-12 mb-10 sm:mb-12">
           {/* Logo & Info - Spans 2 columns on mobile */}
-          <div className="col-span-2 md:col-span-1 space-y-4">
+          <div className="space-y-4 sm:col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-6">
               <img src="/figma/logo-full.png" alt={t("alt_logo")} className="h-8 w-auto opacity-80" />
             </Link>

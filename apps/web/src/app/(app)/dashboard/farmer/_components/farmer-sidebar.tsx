@@ -19,8 +19,6 @@ import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
 import { cn } from "@harvverse-copernicus-hackathon/ui/lib/utils";
 import { useCurrentUser, useLogout } from "@/hooks/use-auth";
-import { LanguageSwitcher } from "@/components/language-switcher";
-
 const ACTIVE_CLASSES =
   "w-full justify-start rounded-none border-l-2 border-primary bg-primary/10 pl-3 text-primary hover:bg-primary/15 hover:text-primary";
 const INACTIVE_CLASSES =
@@ -134,7 +132,6 @@ export default function FarmerSidebar({ isMobileOpen, onClose }: Props) {
             {t("farmer_role")}
           </Badge>
         </div>
-        <LanguageSwitcher />
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-white/55 hover:bg-red-500/10 hover:text-red-300"

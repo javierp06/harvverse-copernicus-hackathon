@@ -20,7 +20,7 @@ export default function PublicFarmsPage() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="bg-[#0F1A24] pt-32 pb-20 border-b border-white/5">
+      <section className="bg-[#0F1A24] pt-24 sm:pt-28 md:pt-32 pb-12 sm:pb-20 border-b border-white/5">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <motion.p
             initial={{ opacity: 0, y: 10 }}
@@ -33,7 +33,7 @@ export default function PublicFarmsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-bold text-white leading-tight mb-8"
+            className="text-3xl sm:text-4xl md:text-6xl font-bold text-white leading-tight mb-6 sm:mb-8"
           >
             {t("directory_headline")}
           </motion.h1>
@@ -53,7 +53,7 @@ export default function PublicFarmsPage() {
             <Button
               asChild
               size="lg"
-              className="bg-primary text-[#0F1A24] font-black h-14 px-10 rounded-xl shadow-xl shadow-primary/20"
+              className="w-full sm:w-auto bg-primary text-[#0F1A24] font-black h-12 sm:h-14 px-8 sm:px-10 rounded-xl shadow-xl shadow-primary/20"
             >
               <Link href={"/sign-up" as Route}>{t("hero_cta_farmer")}</Link>
             </Button>
@@ -62,16 +62,16 @@ export default function PublicFarmsPage() {
       </section>
 
       {/* Directory Section */}
-      <section className="bg-[#001020] py-20 flex-1">
+      <section className="bg-[#001020] py-12 sm:py-20 flex-1">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-8">
               {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5" />
+                <Skeleton key={i} className="h-72 sm:h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-8">
               {farms?.map((farm) => (
                 <Link key={farm.id} href={`/farms/${farm.id}`}>
                   <FarmCard farm={farm as any} />

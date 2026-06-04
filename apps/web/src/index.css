@@ -4,3 +4,24 @@
 .font-trenda {
 	font-family: "Trenda", sans-serif;
 }
+
+@layer utilities {
+	.safe-top {
+		padding-top: env(safe-area-inset-top, 0px);
+	}
+
+	.safe-bottom {
+		padding-bottom: env(safe-area-inset-bottom, 0px);
+	}
+
+	/* Espacio para el CTA fijo del landing en móvil */
+	.landing-sticky-offset {
+		padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	@media (min-width: 768px) {
+		.landing-sticky-offset {
+			padding-bottom: 0;
+		}
+	}
+}

@@ -17,9 +17,9 @@ export function LandingDigitalPartners() {
   ];
 
   return (
-    <section className="bg-[#0F1A24] py-24 md:py-32 overflow-hidden">
+    <section className="bg-[#0F1A24] py-16 sm:py-24 md:py-32 overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-16 items-center">
           {/* Left - Image/Screenshot */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -50,7 +50,7 @@ export function LandingDigitalPartners() {
             <p className="text-[11px] font-bold tracking-[3px] text-primary uppercase mb-6">
               {t("partners_eyebrow")}
             </p>
-            <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-8">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white leading-tight mb-6 sm:mb-8">
               {t("partners_headline")}
             </h2>
             <p className="text-lg text-white/70 mb-10 leading-relaxed">
@@ -72,7 +72,7 @@ export function LandingDigitalPartners() {
               asChild
               variant="outline"
               size="lg"
-              className="border-primary text-primary font-bold h-14 px-8 rounded-xl bg-primary/5 hover:bg-primary/10"
+              className="w-full sm:w-auto border-primary text-primary font-bold h-12 sm:h-14 px-8 rounded-xl bg-primary/5 hover:bg-primary/10"
             >
               <Link href="/waiting-list">
                 {t("partners_cta")}

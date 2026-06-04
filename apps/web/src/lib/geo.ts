@@ -58,3 +58,27 @@ export function polygonContainedIn(lot: Polygon, farm: Polygon): boolean {
     .slice(0, -1)
     .every(([lng, lat]) => pointInRing(lng!, lat!, farmRing));
 }
+
+/** [west, south, east, north] in WGS84 degrees */
+export function polygonBbox(polygon: Polygon): [number, number, number, number] | null {
+  const ring = polygon.coordinates[0] ?? [];
+  if (ring.length < 3) return null;
+
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+
+  for (const coord of ring) {
+    const lng = Number(coord[0]);
+    const lat = Number(coord[1]);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+    if (lng < west) west = lng;
+    if (lng > east) east = lng;
+    if (lat < south) south = lat;
+    if (lat > north) north = lat;
+  }
+
+  if (!Number.isFinite(west)) return null;
+  return [west, south, east, north];
+}

@@ -20,7 +20,7 @@ import {
   CopernicusStatusPill,
 } from "./copernicus-ui";
 
-const PolygonDisplayMap = dynamic(() => import("@/components/polygon-display-map"), {
+const LotProofMap = dynamic(() => import("./lot-proof-map"), {
   ssr: false,
   loading: () => <Skeleton className="h-full w-full rounded-none" />,
 });
@@ -33,6 +33,9 @@ export type PublicLotProofData = {
     region: string;
     country: string;
     polygon?: unknown;
+    farm?: {
+      polygon?: unknown;
+    };
   };
   snapshot: unknown;
 };
@@ -100,14 +103,12 @@ export function PublicLotProofView({ data }: { data: PublicLotProofData | null }
                 </div>
                 <div className="relative h-[320px] w-full shrink-0 bg-white/5 md:h-[380px]">
                   {polygon ? (
-                    <PolygonDisplayMap
-                      polygon={polygon}
+                    <LotProofMap
+                      lotPolygon={polygon}
+                      snapshot={snapshot}
                       className="absolute inset-0"
                       color="#67E8F9"
-                      fillOpacity={0.22}
-                      mapLabel={t("satellite_map")}
-                      invalidPolygonMessage={t("invalid_polygon")}
-                      tileErrorMessage={t("tile_error")}
+                      fillOpacity={0.28}
                     />
                   ) : (
                     <div className="flex h-full min-h-[320px] items-center justify-center italic text-white/30">

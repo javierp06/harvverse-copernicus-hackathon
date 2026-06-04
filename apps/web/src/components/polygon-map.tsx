@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
@@ -115,7 +115,7 @@ export default function PolygonMap({
         className="rounded-lg z-0"
       >
         <TileLayer
-          attribution='Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+          attribution='Tiles &copy; Esri ÔÇö Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         />
         {farmLeaflet && (

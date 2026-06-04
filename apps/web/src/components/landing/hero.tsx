@@ -10,36 +10,33 @@ export function LandingHero() {
   const t = useTranslations("landing");
 
   return (
-    <section className="relative min-h-[100vh] flex flex-col md:flex-row overflow-hidden pt-16">
-      {/* Background Split */}
+    <section className="relative flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden pt-16 md:min-h-[100vh] md:flex-row">
+      {/* Background */}
       <div className="absolute inset-0 z-0 flex flex-col md:flex-row">
-        {/* Left 60% - Real Farm Photo */}
-        <div className="relative h-1/2 md:h-full md:w-[60%] overflow-hidden">
+        <div className="relative h-full w-full overflow-hidden md:h-full md:w-[60%]">
           <img
             src="/figma/landing-hero-farm.png"
             alt={t("alt_farm")}
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-[#0F1A24]/70 md:bg-gradient-to-r md:from-[#0F1A24] md:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0F1A24]/90 via-[#0F1A24]/75 to-[#0F1A24]/95 md:bg-gradient-to-r md:from-[#0F1A24] md:via-[#0F1A24]/80 md:to-transparent" />
         </div>
-        
-        {/* Right 40% - Platform Screenshot */}
-        <div className="relative h-1/2 md:h-full md:w-[40%] overflow-hidden">
+
+        <div className="relative hidden h-full w-[40%] overflow-hidden md:block">
           <img
-            src="/figma/landing-hero-farm.png" // Replace with actual platform screenshot if available, using farm photo as placeholder
+            src="/figma/landing-hero-farm.png"
             alt={t("alt_platform")}
             className="h-full w-full object-cover opacity-50 grayscale contrast-125"
           />
           <div className="absolute inset-0 bg-[#0F1A24]/30" />
         </div>
 
-        {/* Vertical Divider */}
         <div className="absolute left-[60%] top-0 bottom-0 hidden w-[2px] bg-primary md:block shadow-[0_0_15px_rgba(147,216,50,0.5)] z-10" />
       </div>
 
       {/* Content */}
-      <div className="relative z-20 mx-auto flex max-w-7xl flex-1 items-center px-4 md:px-6">
-        <div className="w-full md:max-w-2xl py-12 md:py-24">
+      <div className="relative z-20 mx-auto flex w-full max-w-7xl flex-1 items-center px-4 sm:px-6">
+        <div className="w-full py-10 sm:py-12 md:max-w-2xl md:py-24">
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -53,7 +50,7 @@ export function LandingHero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-4xl md:text-6xl font-bold text-white leading-tight mb-8"
+            className="text-[1.75rem] leading-[1.15] sm:text-4xl md:text-6xl font-bold text-white mb-6 sm:mb-8"
           >
             {t("hero_headline_1")}<br />
             <span className="text-white/90">{t("hero_headline_2")}</span><br />
@@ -64,7 +61,7 @@ export function LandingHero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-lg md:text-xl text-[#C8E6B0] max-w-lg mb-10 leading-relaxed"
+            className="text-base sm:text-lg md:text-xl text-[#C8E6B0] max-w-lg mb-8 sm:mb-10 leading-relaxed"
           >
             {t("hero_subheadline")}
           </motion.p>
@@ -73,12 +70,12 @@ export function LandingHero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 mb-6"
+            className="flex flex-col gap-3 sm:flex-row sm:gap-4 mb-6"
           >
             <Button
               asChild
               size="lg"
-              className="bg-primary text-[#0F1A24] font-black text-lg h-14 px-8 rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+              className="w-full sm:w-auto bg-primary text-[#0F1A24] font-black text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-8 rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
             >
               <Link href={"/sign-up" as Route}>{t("hero_cta_farmer")}</Link>
             </Button>
@@ -86,7 +83,7 @@ export function LandingHero() {
               asChild
               variant="outline"
               size="lg"
-              className="border-white text-white font-bold text-lg h-14 px-8 rounded-xl bg-white/5 backdrop-blur hover:bg-white/10"
+              className="w-full sm:w-auto border-white text-white font-bold text-base sm:text-lg h-12 sm:h-14 px-6 sm:px-8 rounded-xl bg-white/5 backdrop-blur hover:bg-white/10"
             >
               <Link href="/waiting-list">{t("hero_cta_partner")}</Link>
             </Button>

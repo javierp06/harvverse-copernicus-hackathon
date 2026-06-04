@@ -91,7 +91,7 @@ export default async function RootLayout({
 					style={{ background: "#001020", minHeight: "100vh" }}
 					suppressHydrationWarning
 				>
-					<NextIntlClientProvider messages={messages}>
+					<NextIntlClientProvider locale={locale} messages={messages}>
 						<Providers>{children}</Providers>
 					</NextIntlClientProvider>
 				</body>

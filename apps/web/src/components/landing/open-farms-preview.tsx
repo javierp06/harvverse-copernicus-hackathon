@@ -20,14 +20,14 @@ export function LandingOpenFarmsPreview() {
   const farmsToShow = farms?.slice(0, 3) ?? [];
 
   return (
-    <section className="bg-[#001020] py-24 md:py-32">
+    <section className="bg-[#001020] py-16 sm:py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="mb-16 text-center md:text-left flex flex-col md:flex-row justify-between items-end gap-8">
+        <div className="mb-10 sm:mb-16 flex flex-col gap-6 text-center md:flex-row md:items-end md:justify-between md:gap-8 md:text-left">
           <div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white leading-tight mb-3 sm:mb-4">
               {t("open_farms_headline")}
             </h2>
-            <p className="text-white/60 text-lg max-w-xl">
+            <p className="text-white/60 text-base sm:text-lg max-w-xl mx-auto md:mx-0">
               {t("open_farms_subheadline")}
             </p>
           </div>
@@ -43,13 +43,13 @@ export function LandingOpenFarmsPreview() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
-            <Skeleton className="h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5" />
-            <Skeleton className="h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5" />
-            <Skeleton className="h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 md:gap-8">
+            <Skeleton className="h-72 sm:h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5" />
+            <Skeleton className="h-72 sm:h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5 hidden sm:block" />
+            <Skeleton className="h-72 sm:h-64 md:h-96 w-full rounded-2xl md:rounded-3xl bg-white/5 hidden md:block" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8 mb-12">
+          <div className="mb-10 sm:mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 md:gap-8">
             {farmsToShow.map((farm) => (
               <FarmCard key={farm.id} farm={farm as any} />
             ))}

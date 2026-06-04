@@ -30,6 +30,21 @@ export function isGeoJsonPolygon(value: unknown): value is Polygon {
   );
 }
 
+export function polygonsEqual(a: Polygon, b: Polygon): boolean {
+  return JSON.stringify(a.coordinates) === JSON.stringify(b.coordinates);
+}
+
+/** Farm outline for lot maps when farm and lot boundaries differ. */
+export function farmBoundaryForLotMap(
+  farmPolygon: unknown,
+  lotPolygon: Polygon | null,
+): Polygon | null {
+  if (!isGeoJsonPolygon(farmPolygon)) return null;
+  if (!lotPolygon) return null;
+  if (polygonsEqual(farmPolygon, lotPolygon)) return null;
+  return farmPolygon;
+}
+
 /** Farm boundary first, then first lot polygon with valid geometry. */
 export function resolveFarmMapPolygon(
   farmPolygon: unknown,

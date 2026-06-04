@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
       "lucide-react",
       "@tanstack/react-query",
       "@harvverse-copernicus-hackathon/ui",
+      "maplibre-gl",
     ],
   },
 };

@@ -83,14 +83,14 @@ export function LandingWaitlistSection() {
   ];
 
   return (
-    <section className="bg-[#1E3A2F] py-24 md:py-32">
+    <section className="bg-[#1E3A2F] py-16 sm:py-24 md:py-32">
       <div className="mx-auto max-w-4xl px-4 md:px-6">
         <div className="mb-12 text-center">
           <motion.h2
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-3xl md:text-5xl font-bold text-white leading-tight mb-8"
+            className="text-2xl sm:text-3xl md:text-5xl font-bold text-white leading-tight mb-6 sm:mb-8"
           >
             {t("waitlist_headline")}
           </motion.h2>
@@ -106,8 +106,8 @@ export function LandingWaitlistSection() {
                 transition={{ delay: i * 0.1 }}
                 className="bg-white/5 border border-white/10 rounded-xl md:rounded-2xl p-3 md:p-6 backdrop-blur-sm flex flex-col justify-center"
               >
-                <p className="text-sm md:text-2xl font-black text-primary mb-0.5 md:mb-1">{stat.val}</p>
-                <p className="text-[8px] md:text-xs font-bold uppercase tracking-widest text-white/40 leading-tight">{stat.label}</p>
+                <p className="text-base sm:text-lg md:text-2xl font-black text-primary mb-0.5 md:mb-1">{stat.val}</p>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-widest text-white/40 leading-snug">{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -126,13 +126,13 @@ export function LandingWaitlistSection() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
-            className="text-white/70 text-lg"
+            className="text-white/70 text-base sm:text-lg px-2"
           >
             {t("waitlist_subheadline")}
           </motion.p>
         </div>
 
-        <div className="bg-[#0F1A24]/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl mb-16">
+        <div className="bg-[#0F1A24]/40 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-2xl mb-12 sm:mb-16">
           {submitted ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -301,12 +301,12 @@ export function LandingWaitlistSection() {
           {/* How It Works Mini */}
           <div className="text-center">
             <h4 className="text-xs font-black uppercase tracking-[0.3em] text-primary mb-8">{t("waitlist_how_title")}</h4>
-            <div className="flex flex-wrap justify-center items-center gap-4 md:gap-8">
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center sm:items-center sm:gap-4 md:gap-8">
               {steps.map((step, i) => (
-                <div key={i} className="flex items-center gap-4 md:gap-8">
-                  <span className="text-white font-bold text-sm md:text-base">{step}</span>
+                <div key={i} className="flex items-center gap-3 sm:gap-4 md:gap-8">
+                  <span className="text-white font-bold text-sm text-left sm:text-center md:text-base">{step}</span>
                   {i < steps.length - 1 && (
-                    <div className="w-4 h-px bg-white/20" />
+                    <div className="hidden sm:block w-4 h-px bg-white/20 shrink-0" />
                   )}
                 </div>
               ))}
