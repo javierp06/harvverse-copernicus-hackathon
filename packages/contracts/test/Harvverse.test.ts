@@ -1,6 +1,12 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import type { MockUSDC, HarvverseLot, HarvversePartnership, HarvverseEvidence } from "../typechain-types";
+import type {
+  CarbonEstimateRegistry,
+  MockUSDC,
+  HarvverseLot,
+  HarvversePartnership,
+  HarvverseEvidence,
+} from "../typechain-types";
 
 // Finca Zafiro scenario constants
 const TICKET_CENTS = 342_500;         // $3,425.00 investment ticket
@@ -32,6 +38,7 @@ describe("Harvverse — Finca Zafiro happy path", function () {
   let lotContract: HarvverseLot;
   let partnership: HarvversePartnership;
   let evidence: HarvverseEvidence;
+  let carbonRegistry: CarbonEstimateRegistry;
 
   let admin: Awaited<ReturnType<typeof ethers.getSigner>>;
   let farmer: Awaited<ReturnType<typeof ethers.getSigner>>;
@@ -42,6 +49,10 @@ describe("Harvverse — Finca Zafiro happy path", function () {
   const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
   const SCORE_HASH = ethers.keccak256(ethers.toUtf8Bytes("finca-zafiro-copernicus-score-v1"));
   const SCORE_VERSION = "sentinel-live-v0.2.0";
+  const CARBON_HASH = ethers.keccak256(ethers.toUtf8Bytes("finca-zafiro-carbon-estimate-v1"));
+  const CARBON_METHOD_VERSION = "carbon-screening-v0.1.0";
+  const TCO2E_PER_HA_YEAR_BPS = 787; // 7.87 tCO2e/ha/year
+  const TOTAL_TCO2E_PER_YEAR_BPS = 1377; // 13.77 tCO2e/year
 
   before(async function () {
     [admin, farmer, partner] = await ethers.getSigners();
@@ -61,6 +72,9 @@ describe("Harvverse — Finca Zafiro happy path", function () {
 
     const HarvverseEvidence = await ethers.getContractFactory("HarvverseEvidence");
     evidence = await HarvverseEvidence.deploy(admin.address);
+
+    const CarbonEstimateRegistry = await ethers.getContractFactory("CarbonEstimateRegistry");
+    carbonRegistry = await CarbonEstimateRegistry.deploy(admin.address);
 
     // Grant OPERATOR_ROLE on HarvverseLot to Partnership (so it can update status)
     await lotContract.connect(admin).grantRole(OPERATOR_ROLE, await partnership.getAddress());
@@ -127,6 +141,75 @@ describe("Harvverse — Finca Zafiro happy path", function () {
       .connect(admin)
       .updateCopernicusScore(eudrBlockedLotId, 80, false, SCORE_HASH, SCORE_VERSION);
     expect(await lotContract.isInvestmentEligible(eudrBlockedLotId)).to.equal(false);
+  });
+
+  it("admin records carbon estimate evidence for the lot", async function () {
+    await expect(
+      carbonRegistry
+        .connect(admin)
+        .recordCarbonEstimate(
+          LOT_ID,
+          SCORE_HASH,
+          CARBON_HASH,
+          TCO2E_PER_HA_YEAR_BPS,
+          TOTAL_TCO2E_PER_YEAR_BPS,
+          0,
+          CARBON_METHOD_VERSION,
+          "ipfs://carbon-estimate/finca-zafiro-lot-1"
+        )
+    )
+      .to.emit(carbonRegistry, "CarbonEstimateRecorded")
+      .withArgs(
+        LOT_ID,
+        SCORE_HASH,
+        CARBON_HASH,
+        TCO2E_PER_HA_YEAR_BPS,
+        TOTAL_TCO2E_PER_YEAR_BPS,
+        0,
+        CARBON_METHOD_VERSION,
+        "ipfs://carbon-estimate/finca-zafiro-lot-1"
+      );
+
+    const estimate = await carbonRegistry.getCarbonEstimate(LOT_ID);
+    expect(estimate.scoreHash).to.equal(SCORE_HASH);
+    expect(estimate.carbonHash).to.equal(CARBON_HASH);
+    expect(estimate.tCo2ePerHaYearBps).to.equal(TCO2E_PER_HA_YEAR_BPS);
+    expect(estimate.totalTCo2ePerYearBps).to.equal(TOTAL_TCO2E_PER_YEAR_BPS);
+    expect(estimate.state).to.equal(0n);
+    expect(estimate.methodVersion).to.equal(CARBON_METHOD_VERSION);
+    expect(await carbonRegistry.hasCarbonEstimate(LOT_ID)).to.equal(true);
+  });
+
+  it("rejects invalid carbon estimate evidence", async function () {
+    await expect(
+      carbonRegistry
+        .connect(admin)
+        .recordCarbonEstimate(
+          LOT_ID,
+          SCORE_HASH,
+          ethers.ZeroHash,
+          TCO2E_PER_HA_YEAR_BPS,
+          TOTAL_TCO2E_PER_YEAR_BPS,
+          0,
+          CARBON_METHOD_VERSION,
+          ""
+        )
+    ).to.be.revertedWith("Carbon hash required");
+
+    await expect(
+      carbonRegistry
+        .connect(admin)
+        .recordCarbonEstimate(
+          LOT_ID,
+          SCORE_HASH,
+          CARBON_HASH,
+          0,
+          TOTAL_TCO2E_PER_YEAR_BPS,
+          0,
+          CARBON_METHOD_VERSION,
+          ""
+        )
+    ).to.be.revertedWith("Per-hectare estimate required");
   });
 
   it("rejects invalid Copernicus score metadata", async function () {

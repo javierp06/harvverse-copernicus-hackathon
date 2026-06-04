@@ -13,6 +13,7 @@ import { metricValue, parseCopernicusSnapshot, scoreTone } from "@/lib/copernicu
 import { isGeoJsonPolygon } from "@/lib/geo-polygon";
 import { CopernicusQrPanel } from "./copernicus-qr-panel";
 import { CopernicusSignalsGrid } from "./copernicus-signals-grid";
+import { CopernicusCarbonCaptureCard } from "./copernicus-carbon-capture-card";
 import { CopernicusProofCard } from "./copernicus-proof-card";
 import { CopernicusYieldPredictCard } from "./copernicus-yield-predict-card";
 import {
@@ -200,6 +201,7 @@ export function PublicLotProofView({ data }: { data: PublicLotProofData | null }
             {snapshot ? (
               <>
                 <CopernicusYieldPredictCard snapshot={snapshot} />
+                <CopernicusCarbonCaptureCard snapshot={snapshot} />
                 <CopernicusProofCard snapshot={snapshot} />
               </>
             ) : (

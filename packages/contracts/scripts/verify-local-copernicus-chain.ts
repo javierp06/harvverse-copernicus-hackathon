@@ -24,9 +24,15 @@ type CopernicusSnapshot = {
   eligibleForInvestment: boolean;
   scoreHash: string;
   scoreVersion: string;
+  carbonCapture?: {
+    methodVersion?: string;
+    tCo2ePerHaYear?: number | null;
+    totalTCo2ePerYear?: number | null;
+  } | null;
   signedPayload?: {
     payload?: {
       lotCode?: string | null;
+      carbonCapture?: CopernicusSnapshot["carbonCapture"];
     };
   };
 };
@@ -63,6 +69,17 @@ function toBytes32Hash(hash: string) {
   return normalized;
 }
 
+function carbonCaptureFromSnapshot(snapshot: CopernicusSnapshot) {
+  return snapshot.carbonCapture ?? snapshot.signedPayload?.payload?.carbonCapture ?? null;
+}
+
+function toBasisPoints(value: number | null | undefined, label: string) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`${label} must be a positive number.`);
+  }
+  return Math.round(value * 100);
+}
+
 async function main() {
   const snapshotPath = resolveSnapshotPath();
   const snapshot = readJson<CopernicusSnapshot>(snapshotPath);
@@ -84,6 +101,11 @@ async function main() {
   await lotContract.waitForDeployment();
   const lotAddress = await lotContract.getAddress();
 
+  const CarbonEstimateRegistry = await ethers.getContractFactory("CarbonEstimateRegistry");
+  const carbonRegistry = await CarbonEstimateRegistry.deploy(deployer.address);
+  await carbonRegistry.waitForDeployment();
+  const carbonRegistryAddress = await carbonRegistry.getAddress();
+
   await lotContract.createLot(
     lotId,
     deployer.address,
@@ -104,6 +126,51 @@ async function main() {
   const storedScore = await lotContract.getCopernicusScore(lotId);
   const contractInvestmentEligible = await lotContract.isInvestmentEligible(lotId);
   const expectedInvestmentEligible = snapshot.riskScore >= 60 && eudrCompliant;
+  const carbonCapture = carbonCaptureFromSnapshot(snapshot);
+  const carbonHash =
+    carbonCapture == null
+      ? null
+      : ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(carbonCapture)));
+  const carbonWrite =
+    carbonCapture == null
+      ? null
+      : await (async () => {
+          const tCo2ePerHaYearBps = toBasisPoints(
+            carbonCapture.tCo2ePerHaYear,
+            "carbonCapture.tCo2ePerHaYear",
+          );
+          const totalTCo2ePerYearBps = toBasisPoints(
+            carbonCapture.totalTCo2ePerYear,
+            "carbonCapture.totalTCo2ePerYear",
+          );
+          const methodVersion = carbonCapture.methodVersion ?? "carbon-screening-v0.1.0";
+          const tx = await carbonRegistry.recordCarbonEstimate(
+            lotId,
+            scoreHash,
+            carbonHash,
+            tCo2ePerHaYearBps,
+            totalTCo2ePerYearBps,
+            0,
+            methodVersion,
+            `harvverse://copernicus/${lotCode}/carbon`,
+          );
+          const receipt = await tx.wait();
+          const stored = await carbonRegistry.getCarbonEstimate(lotId);
+          return {
+            ok:
+              stored.scoreHash.toLowerCase() === scoreHash.toLowerCase() &&
+              stored.carbonHash.toLowerCase() === carbonHash.toLowerCase() &&
+              Number(stored.tCo2ePerHaYearBps) === tCo2ePerHaYearBps &&
+              Number(stored.totalTCo2ePerYearBps) === totalTCo2ePerYearBps,
+            transactionHash: receipt?.hash ?? tx.hash,
+            contractAddress: carbonRegistryAddress,
+            carbonHash,
+            tCo2ePerHaYearBps,
+            totalTCo2ePerYearBps,
+            state: "estimate_recorded",
+            methodVersion,
+          };
+        })();
 
   const result = {
     ok:
@@ -111,12 +178,14 @@ async function main() {
       storedScore.eudrCompliant === eudrCompliant &&
       storedScore.scoreHash.toLowerCase() === scoreHash.toLowerCase() &&
       contractInvestmentEligible === expectedInvestmentEligible &&
-      snapshot.eligibleForInvestment === expectedInvestmentEligible,
+      snapshot.eligibleForInvestment === expectedInvestmentEligible &&
+      (carbonWrite == null || carbonWrite.ok),
     network: network.name,
     chainId,
     snapshotPath: path.relative(repoRoot, snapshotPath),
     contractAddress: lotAddress,
     transactionHash: receipt?.hash ?? tx.hash,
+    carbonRegistry: carbonWrite,
     lotCode,
     lotId,
     written: {

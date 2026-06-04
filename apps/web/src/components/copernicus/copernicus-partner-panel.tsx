@@ -14,6 +14,7 @@ import { CopernicusNdviCard } from "./copernicus-ndvi-card";
 import { CopernicusYieldPredictCard } from "./copernicus-yield-predict-card";
 import { CopernicusRiskScoreCard } from "./copernicus-risk-score-card";
 import { CopernicusEudrCard } from "./copernicus-eudr-card";
+import { CopernicusCarbonCaptureCard } from "./copernicus-carbon-capture-card";
 import { CopernicusProofCard } from "./copernicus-proof-card";
 import { CopernicusSignalsGrid } from "./copernicus-signals-grid";
 
@@ -68,6 +69,7 @@ export function CopernicusPartnerPanel({
       </div>
       <CopernicusSignalsGrid snapshot={snapshot} />
       <CopernicusRiskScoreCard snapshot={snapshot} />
+      <CopernicusCarbonCaptureCard snapshot={snapshot} />
       <CopernicusProofCard snapshot={snapshot} />
       <div className="flex flex-col gap-2 sm:flex-row">
         {canWriteLocalProof && !localProofWritten && onMarkLocalProof ? (

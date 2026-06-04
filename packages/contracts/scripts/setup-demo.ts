@@ -6,7 +6,7 @@
  *   pnpm setup:demo               (runs this script against localhost:8545)
  *
  * What it does:
- *  1. Deploys MockUSDC, HarvverseLot, HarvversePartnership, HarvverseEvidence
+ *  1. Deploys MockUSDC, HarvverseLot, HarvversePartnership, HarvverseEvidence, CarbonEstimateRegistry
  *  2. Grants OPERATOR_ROLE on HarvverseLot to the Partnership contract
  *  3. Registers the Finca Zafiro lot (HV-HN-ZAF-L02) on-chain
  *  4. Mints 10,000 mock USDC to the demo partner wallet (Hardhat accounts[1])
@@ -90,6 +90,12 @@ async function main() {
   const evidenceAddress = await evidence.getAddress();
   console.log(`HarvverseEvidence → ${evidenceAddress}`);
 
+  const CarbonEstimateRegistry = await ethers.getContractFactory("CarbonEstimateRegistry");
+  const carbonRegistry = await CarbonEstimateRegistry.deploy(deployer.address);
+  await carbonRegistry.waitForDeployment();
+  const carbonRegistryAddress = await carbonRegistry.getAddress();
+  console.log(`CarbonEstimateRegistry → ${carbonRegistryAddress}`);
+
   // 2 — Grant OPERATOR_ROLE on HarvverseLot to the Partnership contract
   const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
   await lotContract.grantRole(OPERATOR_ROLE, partnershipAddress);
@@ -133,6 +139,7 @@ async function main() {
       harvverseLot: lotAddress,
       harvversePartnership: partnershipAddress,
       harvverseEvidence: evidenceAddress,
+      carbonEstimateRegistry: carbonRegistryAddress,
     },
     demoPartnerWallet: demoPartner.address,
   };
@@ -166,7 +173,8 @@ async function main() {
         !l.startsWith("NEXT_PUBLIC_HARDHAT_CHAIN_ID") &&
         !l.startsWith("NEXT_PUBLIC_USDC_ADDRESS") &&
         !l.startsWith("NEXT_PUBLIC_LOT_ADDRESS") &&
-        !l.startsWith("NEXT_PUBLIC_PARTNERSHIP_ADDRESS"),
+        !l.startsWith("NEXT_PUBLIC_PARTNERSHIP_ADDRESS") &&
+        !l.startsWith("NEXT_PUBLIC_CARBON_REGISTRY_ADDRESS"),
     );
 
   const newVars = [
@@ -177,6 +185,7 @@ async function main() {
     `NEXT_PUBLIC_USDC_ADDRESS=${usdcAddress}`,
     `NEXT_PUBLIC_LOT_ADDRESS=${lotAddress}`,
     `NEXT_PUBLIC_PARTNERSHIP_ADDRESS=${partnershipAddress}`,
+    `NEXT_PUBLIC_CARBON_REGISTRY_ADDRESS=${carbonRegistryAddress}`,
   ];
 
   fs.writeFileSync(envPath, [...filteredLines, ...newVars].join("\n") + "\n");

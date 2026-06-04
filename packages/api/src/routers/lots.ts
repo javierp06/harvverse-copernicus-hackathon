@@ -115,6 +115,9 @@ type PublicLotRecord = typeof lots.$inferSelect & {
   plans: Array<typeof plans.$inferSelect>;
 };
 type LotForCopernicus = typeof lots.$inferSelect;
+type LotWithOptionalFarm = LotForCopernicus & {
+  farm?: Pick<typeof farms.$inferSelect, "shadeTrees">;
+};
 type LotPlanEconomics = {
   investmentTicketCents?: number | null;
   productionCostCents?: number | null;
@@ -138,6 +141,16 @@ type LocalChainProofResult = {
   contractAddress: string;
   transactionHash: string;
   lotId: string;
+  carbonRegistry?: {
+    ok: boolean;
+    contractAddress: string;
+    transactionHash: string;
+    carbonHash: string;
+    tCo2ePerHaYearBps: number;
+    totalTCo2ePerYearBps: number;
+    state: string;
+    methodVersion: string;
+  } | null;
 };
 
 function resolveRepoRoot() {
@@ -178,6 +191,10 @@ function planToLotEconomics(plan: typeof plans.$inferSelect): LotPlanEconomics {
     farmerShareBps: plan.splitFarmerBps,
     partnerShareBps: plan.splitPartnerBps,
   };
+}
+
+function getFarmShadeTrees(lot: LotForCopernicus) {
+  return (lot as LotWithOptionalFarm).farm?.shadeTrees ?? null;
 }
 
 async function getLotPlanEconomics(
@@ -223,6 +240,7 @@ async function buildCopernicusSnapshotForLot(
 ) {
   const lotWithEconomics = {
     ...lot,
+    shadeTrees: getFarmShadeTrees(lot),
     ...(await getLotPlanEconomics(db, lot)),
   };
 
@@ -311,6 +329,9 @@ async function runLocalCopernicusVerifier(
   try {
     const snapshotPath = path.join(tempDir, "snapshot.json");
     const outputPath = path.join(tempDir, "proof.json");
+    const signedPayload = asRecord(snapshot.signedPayload);
+    const signedPayloadBody = asRecord(signedPayload.payload);
+    const carbonCapture = signedPayloadBody.carbonCapture ?? null;
     await writeFile(
       snapshotPath,
       `${JSON.stringify(
@@ -321,6 +342,7 @@ async function runLocalCopernicusVerifier(
           eligibleForInvestment: snapshot.eligibleForInvestment,
           scoreHash: snapshot.scoreHash,
           scoreVersion: snapshot.scoreVersion,
+          carbonCapture,
         },
         null,
         2,
@@ -730,6 +752,7 @@ export const lotsRouter = router({
         metadataStatus: "written",
         proofMode: "local-hardhat-in-memory",
         lotId: proof.lotId,
+        carbonRegistry: proof.carbonRegistry ?? existingChain.carbonRegistry ?? null,
         verifiedAt: now.toISOString(),
       };
 

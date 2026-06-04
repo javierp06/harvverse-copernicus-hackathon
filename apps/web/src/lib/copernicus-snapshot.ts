@@ -94,6 +94,23 @@ export type CopernicusSnapshotView = {
     ndviModifier?: number;
     densityModifier?: number;
   };
+  carbonCapture: {
+    sourceMode?: CopernicusSourceMode;
+    methodVersion?: string;
+    mrvStatus?: "estimate_only" | string;
+    tCo2ePerHaYear: number | null;
+    totalTCo2ePerYear: number | null;
+    areaHectares: number | null;
+    canopyCoverPct: number | null;
+    shadeTreeDensityPerHa: number | null;
+    shadeSpeciesGroup?: string;
+    soilCarbonAssumption?: string;
+    confidence?: "low" | "medium" | "high" | string;
+    formula?: string;
+    interpretation?: string;
+    limitations: string[];
+    requiredFieldInventory: string[];
+  } | null;
   scoreHash: string;
   chain: SnapshotChainProof;
 };
@@ -156,6 +173,33 @@ function parseParcelScale(value: unknown): SnapshotDataQuality["parcelScale"] {
   };
 }
 
+function parseCarbonCapture(value: unknown): CopernicusSnapshotView["carbonCapture"] {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  return {
+    sourceMode: record.sourceMode === "live" ? "live" : "fixture",
+    methodVersion: record.methodVersion == null ? undefined : String(record.methodVersion),
+    mrvStatus: record.mrvStatus == null ? undefined : String(record.mrvStatus),
+    tCo2ePerHaYear: nullableNumber(record.tCo2ePerHaYear),
+    totalTCo2ePerYear: nullableNumber(record.totalTCo2ePerYear),
+    areaHectares: nullableNumber(record.areaHectares),
+    canopyCoverPct: nullableNumber(record.canopyCoverPct),
+    shadeTreeDensityPerHa: nullableNumber(record.shadeTreeDensityPerHa),
+    shadeSpeciesGroup:
+      record.shadeSpeciesGroup == null ? undefined : String(record.shadeSpeciesGroup),
+    soilCarbonAssumption:
+      record.soilCarbonAssumption == null ? undefined : String(record.soilCarbonAssumption),
+    confidence: record.confidence == null ? undefined : String(record.confidence),
+    formula: record.formula == null ? undefined : String(record.formula),
+    interpretation: record.interpretation == null ? undefined : String(record.interpretation),
+    limitations: Array.isArray(record.limitations) ? record.limitations.map(String) : [],
+    requiredFieldInventory: Array.isArray(record.requiredFieldInventory)
+      ? record.requiredFieldInventory.map(String)
+      : [],
+  };
+}
+
 export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView | null {
   const record = asRecord(value);
   if (!record) return null;
@@ -169,6 +213,11 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
   const era5Record = asRecord(record.era5);
   const eudrRecord = asRecord(record.eudr);
   const chainFromDb = asRecord(record.chain);
+  const signedPayloadRecord = asRecord(record.signedPayload);
+  const signedPayloadPayloadRecord = asRecord(signedPayloadRecord?.payload);
+  const carbonCapture = parseCarbonCapture(
+    record.carbonCapture ?? signedPayloadPayloadRecord?.carbonCapture,
+  );
 
   const historicalRaw = sentinel2Record?.historicalSeries;
   const historicalSeries = Array.isArray(historicalRaw)
@@ -266,6 +315,7 @@ export function parseCopernicusSnapshot(value: unknown): CopernicusSnapshotView 
       ndviModifier: nullableNumber(yieldRecord?.ndviModifier) ?? undefined,
       densityModifier: nullableNumber(yieldRecord?.densityModifier) ?? undefined,
     },
+    carbonCapture,
     scoreHash: String(record.scoreHash ?? ""),
     chain: getSnapshotChain({ chain: chainFromDb ?? record.chain }),
   };

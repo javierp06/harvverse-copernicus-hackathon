@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 
 import {
+  buildCarbonCaptureEstimate,
+  type CarbonCaptureEstimate,
+} from "./copernicus/carbon";
+import {
   fetchCopernicusDemElevation,
   summarizeCopernicusDem,
 } from "./copernicus/dem";
@@ -180,6 +184,7 @@ export interface CopernicusLotSnapshot {
     parchmentToOroFactor: number;
     formula: string;
   };
+  carbonCapture: CarbonCaptureEstimate;
   evidenceHash: string;
   scoreHash: string;
   signedPayload: {
@@ -220,6 +225,7 @@ interface SnapshotLotInput {
   farmerShareBps?: number | null;
   partnerShareBps?: number | null;
   harvestYear?: number | null;
+  shadeTrees?: string | null;
 }
 
 const SCORE_VERSION = "sentinel-v0.3.0";
@@ -769,6 +775,17 @@ export function buildFixtureCopernicusSnapshot(
     ndviSeries,
     sourceMode: "fixture",
   });
+  const carbonCapture = buildCarbonCaptureEstimate({
+    sourceMode: "fixture",
+    areaManzanas,
+    currentNdvi,
+    currentNdre,
+    currentNdwi,
+    radarVegetationIndex: 0.8,
+    vhVvRatio: 0.25,
+    shadeTrees: lot.shadeTrees,
+    numCoffeeTrees: lot.numTrees,
+  });
   const evidenceTo = "2026-05-26";
   const sources: CopernicusSourceMetadata[] = [
     {
@@ -851,11 +868,13 @@ export function buildFixtureCopernicusSnapshot(
     sources,
     dataQuality,
     yieldPredict,
+    carbonCapture,
   };
   const evidenceHash = hashJson({
     ...unsignedPayload,
     polygon: lot.polygon ?? null,
     sentinel2: ndviSeries,
+    carbonCapture,
     annualRainfallMm,
     meanTemperatureC,
   });
@@ -921,6 +940,7 @@ export function buildFixtureCopernicusSnapshot(
       },
     },
     yieldPredict,
+    carbonCapture,
     evidenceHash,
     scoreHash: evidenceHash,
     signedPayload: {
@@ -948,11 +968,12 @@ export async function buildLiveCopernicusSnapshot(
 
   const fixture = buildFixtureCopernicusSnapshot(lot);
   const climateCentroid = centroidFromPolygon(polygon);
+  const selfReportedAltitude = toNumber(lot.altitudeMasl);
   const now = new Date();
   const sentinelEvidenceEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
     .toISOString()
     .split("T")[0];
-  const [ndviMonths, sarQuarters, climateMonths, demAltitude] = await Promise.all([
+  const [ndviMonths, sarQuarters, climateMonths, demResult] = await Promise.all([
     fetchSentinel2NdviMonths({
       token,
       polygon,
@@ -967,7 +988,15 @@ export async function buildLiveCopernicusSnapshot(
     fetchCopernicusDemElevation({
       lat: climateCentroid.lat,
       lng: climateCentroid.lng,
-    }),
+    })
+      .then((altitudeMasl) => ({ altitudeMasl, error: null as string | null }))
+      .catch((error: unknown) => ({
+        altitudeMasl: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Open-Meteo Copernicus DEM elevation failed.",
+      })),
   ]);
   const usableMonths = ndviMonths.filter(
     (month): month is typeof month & { ndvi: number } => month.ndvi != null,
@@ -989,11 +1018,15 @@ export async function buildLiveCopernicusSnapshot(
 
   const sentinel1Summary = summarizeSentinel1SarQuarters(sarQuarters);
   const era5Summary = summarizeEra5ClimateMonths(climateMonths);
+  const demAltitude =
+    demResult.altitudeMasl ??
+    selfReportedAltitude ??
+    fixture.dem.altitudeMasl ??
+    1450;
   const demSummary = summarizeCopernicusDem(demAltitude);
   const eudrGate = buildEudrGateFromSentinel2(ndviMonths);
-  const selfReportedAltitude = toNumber(lot.altitudeMasl);
   const altitudeDelta =
-    selfReportedAltitude == null
+    selfReportedAltitude == null || demResult.altitudeMasl == null
       ? null
       : Math.abs(selfReportedAltitude - demSummary.altitudeMasl);
   const currentNdvi = scoreMonths.at(-1)?.ndvi ?? 0;
@@ -1032,6 +1065,18 @@ export async function buildLiveCopernicusSnapshot(
     altitudeMasl: demSummary.altitudeMasl,
     ndviSeries: historicalSeries,
     sourceMode: "live",
+  });
+  const carbonCapture = buildCarbonCaptureEstimate({
+    sourceMode: "live",
+    areaManzanas: fixture.dem.areaManzanas ?? toNumber(lot.areaManzanas) ?? null,
+    currentNdvi,
+    currentNdre,
+    currentNdwi,
+    radarVegetationIndex:
+      sentinel1Summary.radarVegetationIndex ?? fixture.sentinel1.radarVegetationIndex,
+    vhVvRatio: sentinel1Summary.vhVvRatio ?? fixture.sentinel1.vhVvRatio,
+    shadeTrees: lot.shadeTrees,
+    numCoffeeTrees: lot.numTrees,
   });
   const variables = fixture.variables.map((variable) => {
     if (variable.key === "sentinel2_current_ndvi") {
@@ -1132,16 +1177,21 @@ export async function buildLiveCopernicusSnapshot(
       : source.key === "dem"
         ? {
             ...source,
-            provider: "Open-Meteo elevation endpoint",
+            provider:
+              demResult.error == null
+                ? "Open-Meteo elevation endpoint"
+                : "Stored lot altitude fallback",
             dataset: "Copernicus DEM GLO-90",
             mode: "live" as const,
             dateRange: {
               from: "2020-01-01",
               to: source.dateRange.to,
             },
-            resolution: "90m",
+            resolution: demResult.error == null ? "90m" : null,
             notes:
-              "Live altitude uses Open-Meteo's Copernicus DEM GLO-90 elevation endpoint as a centroid fallback; direct CDSE DEM remains a future hardening path.",
+              demResult.error == null
+                ? "Live altitude uses Open-Meteo's Copernicus DEM GLO-90 elevation endpoint as a centroid fallback; direct CDSE DEM remains a future hardening path."
+                : `DEM endpoint was unavailable, so this snapshot fell back to the stored lot altitude. Original DEM error: ${demResult.error}`,
           }
       : source.key === "eudr"
         ? {
@@ -1170,7 +1220,7 @@ export async function buildLiveCopernicusSnapshot(
       (scoreMonths.length / 24) * 0.55 +
         (usableSarQuarters.length / 8) * 0.18 +
         (climateMonths.length / 24) * 0.22 +
-        0.05,
+        (demResult.error == null ? 0.05 : 0),
     ).toFixed(2),
   );
   const dataQuality: CopernicusDataQuality = {
@@ -1178,9 +1228,13 @@ export async function buildLiveCopernicusSnapshot(
     confidence: lowerConfidence(combinedLiveConfidence, parcelScale.confidence),
     completeness: liveCompleteness,
     warnings: [
-      "Sentinel-2 NDVI, Sentinel-1 SAR, ERA5 climate, Copernicus DEM altitude, and Sentinel-2 EUDR continuity evidence are live.",
+      demResult.error == null
+        ? "Sentinel-2 NDVI, Sentinel-1 SAR, ERA5 climate, Copernicus DEM altitude, and Sentinel-2 EUDR continuity evidence are live."
+        : "Sentinel-2 NDVI, Sentinel-1 SAR, ERA5 climate, and Sentinel-2 EUDR continuity evidence are live; DEM altitude used stored lot fallback.",
       "EUDR uses a live Sentinel-2 continuity screen in this slice; official JRC baseline intersection is still pending.",
-      "DEM altitude uses Open-Meteo's Copernicus DEM GLO-90 endpoint, not direct CDSE DEM.",
+      demResult.error == null
+        ? "DEM altitude uses Open-Meteo's Copernicus DEM GLO-90 endpoint, not direct CDSE DEM."
+        : `Open-Meteo Copernicus DEM elevation failed during this run: ${demResult.error}`,
       "Coffee agroforestry and shade trees can make optical indices resemble forest; interpret NDRE/NDWI with SAR and field context.",
       ...(altitudeDelta != null && altitudeDelta > 300
         ? [`Stored altitude differs from DEM by ${Math.round(altitudeDelta)} masl; check the demo polygon or lot metadata.`]
@@ -1202,11 +1256,13 @@ export async function buildLiveCopernicusSnapshot(
     sources,
     dataQuality,
     yieldPredict,
+    carbonCapture,
   };
   const evidenceHash = hashJson({
     ...unsignedPayload,
     polygon: lot.polygon ?? null,
     sentinel2: historicalSeries,
+    carbonCapture,
     eudrEvidence: ndviMonths,
     sentinel1: sarQuarters,
     era5: climateMonths,
@@ -1215,6 +1271,8 @@ export async function buildLiveCopernicusSnapshot(
       altitudeMasl: demSummary.altitudeMasl,
       terrainSuitability: demSummary.terrainSuitability,
       terrainRisk: demSummary.terrainRisk,
+      fallbackApplied: demResult.error != null,
+      fallbackReason: demResult.error,
       limitations: demSummary.limitations,
     },
   });
@@ -1283,6 +1341,7 @@ export async function buildLiveCopernicusSnapshot(
       evidenceDateRange: eudrGate.evidenceDateRange,
     },
     yieldPredict,
+    carbonCapture,
     evidenceHash,
     scoreHash: evidenceHash,
     signedPayload: {

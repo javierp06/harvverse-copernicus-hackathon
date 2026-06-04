@@ -11,6 +11,11 @@ type Snapshot = {
   eligibleForInvestment: boolean;
   scoreHash: string;
   scoreVersion: string;
+  carbonCapture?: {
+    methodVersion?: string;
+    tCo2ePerHaYear?: number | null;
+    totalTCo2ePerYear?: number | null;
+  } | null;
   chain?: {
     transactionHash?: string | null;
     contractAddress?: string | null;
@@ -20,6 +25,7 @@ type Snapshot = {
   signedPayload?: {
     payload?: {
       lotCode?: string | null;
+      carbonCapture?: Snapshot["carbonCapture"];
     };
   };
 };
@@ -60,6 +66,17 @@ function normalizeChainId(value: unknown) {
   return chainId;
 }
 
+function carbonCaptureFromSnapshot(snapshot: Snapshot) {
+  return snapshot.carbonCapture ?? snapshot.signedPayload?.payload?.carbonCapture ?? null;
+}
+
+function toBasisPoints(value: number | null | undefined, label: string) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`${label} must be a positive number.`);
+  }
+  return Math.round(value * 100);
+}
+
 const snapshotPath = resolveRepoPath(
   process.env.SNAPSHOT_PATH ?? ".docs/sentinel/sample-copernicus-snapshot.json",
 );
@@ -81,6 +98,11 @@ if (!snapshot.scoreVersion) {
 
 const lotId = keccak256(toUtf8Bytes(lotCode));
 const scoreHash = normalizeScoreHash(snapshot.scoreHash);
+const carbonCapture = carbonCaptureFromSnapshot(snapshot);
+const carbonHash =
+  carbonCapture == null
+    ? null
+    : keccak256(toUtf8Bytes(JSON.stringify(carbonCapture))).toLowerCase();
 const eudrCompliant = snapshot.eudrStatus === "verified";
 const scoreEligible = snapshot.riskScore >= 60;
 const contractInvestmentEligible = scoreEligible && eudrCompliant;
@@ -118,6 +140,29 @@ const proof = {
       scoreVersion: snapshot.scoreVersion,
     },
   },
+  carbonRegistry:
+    carbonCapture == null || carbonHash == null
+      ? null
+      : {
+          contract: "CarbonEstimateRegistry",
+          functionName: "recordCarbonEstimate",
+          args: {
+            lotId,
+            scoreHash,
+            carbonHash,
+            tCo2ePerHaYearBps: toBasisPoints(
+              carbonCapture.tCo2ePerHaYear,
+              "carbonCapture.tCo2ePerHaYear",
+            ),
+            totalTCo2ePerYearBps: toBasisPoints(
+              carbonCapture.totalTCo2ePerYear,
+              "carbonCapture.totalTCo2ePerYear",
+            ),
+            state: "estimate_recorded",
+            methodVersion: carbonCapture.methodVersion ?? "carbon-screening-v0.1.0",
+            evidenceUri: `harvverse://copernicus/${lotCode}/carbon`,
+          },
+        },
   dbMarker: {
     scoreHash: scoreHash.slice(2),
     chainId,
