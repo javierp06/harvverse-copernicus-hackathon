@@ -8,7 +8,6 @@ import { useTranslations } from "next-intl";
 import { Skeleton } from "@harvverse-copernicus-hackathon/ui/components/skeleton";
 
 import type { CopernicusSnapshotView } from "@/lib/copernicus-snapshot";
-import { farmBoundaryForLotMap } from "@/lib/geo-polygon";
 
 const LotProofTerrainMap = dynamic(() => import("./lot-proof-terrain-map"), {
   ssr: false,
@@ -22,7 +21,6 @@ const PolygonDisplayMap = dynamic(() => import("@/components/polygon-display-map
 
 interface Props {
   lotPolygon: Polygon;
-  farmPolygon?: unknown;
   snapshot: CopernicusSnapshotView | null;
   color?: string;
   fillOpacity?: number;
@@ -31,7 +29,6 @@ interface Props {
 
 export default function LotProofMap({
   lotPolygon,
-  farmPolygon,
   snapshot,
   color = "#67E8F9",
   fillOpacity = 0.22,
@@ -39,12 +36,16 @@ export default function LotProofMap({
 }: Props) {
   const t = useTranslations("lot_proof");
   const [useFallback2d, setUseFallback2d] = useState(false);
-  const farmContext = farmBoundaryForLotMap(farmPolygon, lotPolygon) ?? undefined;
+  const snapshotOverlay = snapshot
+    ? {
+        riskScore: snapshot.riskScore ?? undefined,
+        ndvi: snapshot.sentinel2.currentNdvi ?? undefined,
+        altitudeMasl: snapshot.dem.altitudeMasl,
+      }
+    : undefined;
 
   const shared = {
     polygon: lotPolygon,
-    contextPolygon: farmContext,
-    contextColor: "#4a9eff",
     className: "absolute inset-0",
     color,
     fillOpacity,
@@ -68,21 +69,12 @@ export default function LotProofMap({
     <div className={className} style={{ position: "relative", height: "100%", width: "100%" }}>
       <LotProofTerrainMap
         lotPolygon={lotPolygon}
-        farmPolygon={farmPolygon}
         color={color}
         fillOpacity={fillOpacity}
         className="absolute inset-0"
         mapLabel={t("terrain_map_label")}
         rotateHint={t("terrain_rotate_hint")}
-        snapshotOverlay={
-          snapshot
-            ? {
-                riskScore: snapshot.riskScore,
-                ndvi: snapshot.sentinel2.currentNdvi,
-                altitudeMasl: snapshot.dem.altitudeMasl,
-              }
-            : undefined
-        }
+        snapshotOverlay={snapshotOverlay}
         onFallback={() => setUseFallback2d(true)}
       />
     </div>

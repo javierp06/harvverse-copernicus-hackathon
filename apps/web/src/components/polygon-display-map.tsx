@@ -79,10 +79,7 @@ export default function PolygonDisplayMap({
     const ring = geoToLeaflet(contextPolygon.coordinates[0]);
     return ring.length >= 3 ? ring : null;
   }, [contextPolygon]);
-  const fitRings = useMemo(
-    () => [positions, ...(contextPositions ? [contextPositions] : [])],
-    [positions, contextPositions],
-  );
+  const fitRings = useMemo(() => [positions], [positions]);
   const [tileError, setTileError] = useState(false);
 
   if (positions.length < 3) {

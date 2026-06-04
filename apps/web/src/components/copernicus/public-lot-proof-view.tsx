@@ -105,7 +105,6 @@ export function PublicLotProofView({ data }: { data: PublicLotProofData | null }
                   {polygon ? (
                     <LotProofMap
                       lotPolygon={polygon}
-                      farmPolygon={lot.farm?.polygon}
                       snapshot={snapshot}
                       className="absolute inset-0"
                       color="#67E8F9"

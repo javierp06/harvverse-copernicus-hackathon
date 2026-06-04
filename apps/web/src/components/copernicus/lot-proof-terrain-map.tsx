@@ -8,10 +8,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Map, { Layer, NavigationControl, Source, type MapRef } from "react-map-gl/maplibre";
 
 import { polygonBbox, polygonCentroid } from "@/lib/geo";
-import { farmBoundaryForLotMap } from "@/lib/geo-polygon";
 import {
   buildLotProofMapStyle,
   LOT_TERRAIN_EXAGGERATION,
+  LOT_TERRAIN_MAX_ZOOM,
   LOT_TERRAIN_SOURCE,
   LOT_VIEW_BEARING,
   LOT_VIEW_PITCH,
@@ -28,7 +28,6 @@ interface SnapshotOverlay {
 
 interface Props {
   lotPolygon: Polygon;
-  farmPolygon?: unknown;
   color?: string;
   fillOpacity?: number;
   mapLabel: string;
@@ -40,7 +39,6 @@ interface Props {
 
 function toGeoJson(
   lotPolygon: Polygon,
-  farmPolygon: Polygon | null,
   color: string,
   fillOpacity: number,
 ): FeatureCollection {
@@ -56,18 +54,6 @@ function toGeoJson(
     },
   ];
 
-  if (farmPolygon) {
-    features.push({
-      type: "Feature",
-      properties: {
-        role: "farm",
-        strokeColor: "#4a9eff",
-        fillColor: "rgba(74, 158, 255, 0.06)",
-      },
-      geometry: farmPolygon,
-    });
-  }
-
   return { type: "FeatureCollection", features };
 }
 
@@ -81,7 +67,7 @@ function fitLotView(map: maplibregl.Map, bbox: [number, number, number, number])
     {
       padding: { top: 48, bottom: 72, left: 40, right: 40 },
       duration: 700,
-      maxZoom: 16,
+      maxZoom: LOT_TERRAIN_MAX_ZOOM,
       pitch: LOT_VIEW_PITCH,
       bearing: LOT_VIEW_BEARING,
     },
@@ -90,7 +76,6 @@ function fitLotView(map: maplibregl.Map, bbox: [number, number, number, number])
 
 export default function LotProofTerrainMap({
   lotPolygon,
-  farmPolygon,
   color = "#67E8F9",
   fillOpacity = 0.28,
   mapLabel,
@@ -103,28 +88,15 @@ export default function LotProofTerrainMap({
   const fallbackTriggered = useRef(false);
   const [ready, setReady] = useState(false);
 
-  const contextFarm = useMemo(
-    () => farmBoundaryForLotMap(farmPolygon, lotPolygon),
-    [farmPolygon, lotPolygon],
-  );
-
   const geojson = useMemo(
-    () => toGeoJson(lotPolygon, contextFarm, color, fillOpacity),
-    [lotPolygon, contextFarm, color, fillOpacity],
+    () => toGeoJson(lotPolygon, color, fillOpacity),
+    [lotPolygon, color, fillOpacity],
   );
 
   const bbox = useMemo(() => {
     const lotBox = polygonBbox(lotPolygon);
-    const farmBox = contextFarm ? polygonBbox(contextFarm) : null;
-    if (!lotBox) return null;
-    if (!farmBox) return lotBox;
-    return [
-      Math.min(lotBox[0], farmBox[0]),
-      Math.min(lotBox[1], farmBox[1]),
-      Math.max(lotBox[2], farmBox[2]),
-      Math.max(lotBox[3], farmBox[3]),
-    ] as [number, number, number, number];
-  }, [lotPolygon, contextFarm]);
+    return lotBox;
+  }, [lotPolygon]);
 
   const { lat, lng } = useMemo(() => polygonCentroid(lotPolygon), [lotPolygon]);
 
@@ -184,6 +156,7 @@ export default function LotProofTerrainMap({
         }}
         style={{ width: "100%", height: "100%" }}
         terrain={{ source: LOT_TERRAIN_SOURCE, exaggeration: LOT_TERRAIN_EXAGGERATION }}
+        maxZoom={LOT_TERRAIN_MAX_ZOOM}
         maxPitch={72}
         dragRotate
         scrollZoom
@@ -199,23 +172,6 @@ export default function LotProofTerrainMap({
             type="fill"
             filter={["==", ["get", "role"], "lot"]}
             paint={{ "fill-color": ["get", "fillColor"], "fill-antialias": true }}
-          />
-          <Layer
-            id="lot-proof-farm-fill"
-            type="fill"
-            filter={["==", ["get", "role"], "farm"]}
-            paint={{ "fill-color": ["get", "fillColor"] }}
-          />
-          <Layer
-            id="lot-proof-farm-line"
-            type="line"
-            filter={["==", ["get", "role"], "farm"]}
-            paint={{
-              "line-color": ["get", "strokeColor"],
-              "line-width": 2,
-              "line-dasharray": [2, 2],
-              "line-opacity": 0.85,
-            }}
           />
           <Layer
             id="lot-proof-line"

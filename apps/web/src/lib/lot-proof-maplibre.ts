@@ -14,6 +14,7 @@ export const LOT_SATELLITE_SOURCE = "lot-satellite";
 export const LOT_TERRAIN_EXAGGERATION = 1.45;
 export const LOT_VIEW_PITCH = 56;
 export const LOT_VIEW_BEARING = -28;
+export const LOT_TERRAIN_MAX_ZOOM = 17;
 
 export function buildLotProofMapStyle(): StyleSpecification {
   return {
@@ -32,7 +33,7 @@ export function buildLotProofMapStyle(): StyleSpecification {
         type: "raster-dem",
         tiles: [LOT_DEM_TILES],
         tileSize: 256,
-        maxzoom: 15,
+        maxzoom: LOT_TERRAIN_MAX_ZOOM,
         encoding: "terrarium",
         attribution: "Terrain &copy; Mapzen / AWS Terrain Tiles",
       },
