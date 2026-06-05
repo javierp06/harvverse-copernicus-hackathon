@@ -33,6 +33,8 @@ import {
 import { computeEarnings, formatUsdFromCents, formatUsdPrecise, formatUsd } from "@/lib/format";
 import { farmBoundaryForLotMap } from "@/lib/geo-polygon";
 import { asRecord, chainLabel, getSnapshotChain } from "@/lib/chainProof";
+import { parseCopernicusSnapshot } from "@/lib/copernicus-snapshot";
+import { CopernicusCarbonCaptureCard } from "@/components/copernicus/copernicus-carbon-capture-card";
 import { CopernicusFarmerStatusCard } from "@/components/copernicus/copernicus-farmer-status-card";
 import { trpc } from "@/utils/trpc";
 
@@ -125,6 +127,7 @@ export default function FarmerLotDetailPage() {
 
   const activePlan = lot.plans.find((p) => p.status !== "revoked") ?? null;
   const copernicusSnapshot = lot.copernicusSnapshot ?? null;
+  const parsedCopernicusSnapshot = parseCopernicusSnapshot(copernicusSnapshot);
   const copernicusEligible = copernicusSnapshot?.eligibleForInvestment === true;
   const chainProof = getSnapshotChain(copernicusSnapshot);
   const localProofWritten = chainProof.metadataStatus === "written";
@@ -296,6 +299,10 @@ export default function FarmerLotDetailPage() {
                   <span className="font-mono text-xs text-primary">{shortHash(chainProof.transactionHash, t("pending"))}</span>
                 </div>
               </div>
+
+              {parsedCopernicusSnapshot ? (
+                <CopernicusCarbonCaptureCard snapshot={parsedCopernicusSnapshot} interactive />
+              ) : null}
 
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
