@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRightLeft, Coins, RefreshCw, Sprout } from "lucide-react";
+import { ArrowRightLeft, RefreshCw, Sprout } from "lucide-react";
 
 import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
@@ -227,17 +227,22 @@ function CarbonCreditSimulation({
   };
 
   return (
-    <div className="mt-5 min-w-0 overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-950/20">
+    <div className="mt-5 min-w-0 overflow-hidden rounded-2xl border border-fuchsia-300/20 bg-purple-950/30">
       <div className="grid min-w-0 gap-0 xl:grid-cols-[170px_minmax(0,1fr)]">
-        <div className="flex flex-col items-center justify-center gap-3 border-b border-emerald-400/10 bg-[radial-gradient(circle_at_35%_30%,rgba(251,191,36,0.9),rgba(16,185,129,0.55)_45%,rgba(5,46,22,0.35)_80%)] p-4 xl:border-b-0 xl:border-r">
-          <div className="grid size-24 place-items-center rounded-full border border-yellow-200/50 bg-yellow-300/20 shadow-[0_0_40px_rgba(16,185,129,0.25)]">
-            <div className="grid size-16 place-items-center rounded-full border border-yellow-100/70 bg-black/25 text-center">
-              <Coins className="mx-auto size-4 text-yellow-100" />
+        <div className="flex flex-col items-center justify-center gap-3 border-b border-fuchsia-300/10 bg-[radial-gradient(circle_at_35%_25%,rgba(216,180,254,0.95),rgba(147,51,234,0.7)_44%,rgba(49,46,129,0.55)_80%)] p-4 xl:border-b-0 xl:border-r">
+          <div className="grid size-24 place-items-center rounded-full border border-fuchsia-100/50 bg-white/10 shadow-[0_0_42px_rgba(168,85,247,0.35)]">
+            <div className="grid size-16 place-items-center rounded-full border border-fuchsia-50/70 bg-black/25 text-center">
+              <img
+                src="/logo-square.png"
+                alt=""
+                aria-hidden="true"
+                className="mx-auto size-6 object-contain"
+              />
               <p className="mt-1 text-xl font-black text-white">HC</p>
             </div>
           </div>
-          <p className="max-w-[150px] text-center text-[10px] font-black uppercase tracking-[0.18em] text-emerald-50/70">
-            Carbon credit simulation
+          <p className="max-w-[150px] text-center text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-50/80">
+            Carbon credit
           </p>
         </div>
 
@@ -281,7 +286,7 @@ function CarbonCreditSimulation({
               className="h-auto min-h-10 min-w-0 rounded-xl border-white/10 bg-white/[0.03] px-3 py-2 text-center text-white whitespace-normal hover:bg-white/[0.08]"
             >
               <RefreshCw className="size-4" />
-              Add next cycle
+              New credit cycle
             </Button>
           </div>
 
