@@ -7,9 +7,7 @@ import {
   ArrowLeft,
   BellRing,
   CheckCircle2,
-  Copy,
   Droplets,
-  Info,
   Leaf,
   Loader2,
   Satellite,
@@ -29,185 +27,96 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@harvverse-copernicus-hackathon/ui/components/select";
-import { Textarea } from "@harvverse-copernicus-hackathon/ui/components/textarea";
 import { cn } from "@harvverse-copernicus-hackathon/ui/lib/utils";
+
 import { trpc } from "@/utils/trpc";
 
 const SCENARIOS = [
   {
     key: "lot_approved",
     label: "Lote aprobado",
-    signal: "S6",
     description: "Score listo, EUDR verificado y YieldPredict disponible.",
-    liveCondition: "riskScore >= 60, EUDR verified y eligibleForInvestment = true.",
-    changedSignal: "El análisis Copernicus termina con score suficiente y sin bloqueo EUDR.",
-    demoKnobs: "No requiere overrides; usa el snapshot actual del lote.",
     icon: CheckCircle2,
   },
   {
     key: "eudr_blocked",
     label: "EUDR bloqueado",
-    signal: "S4",
-    description: "Bloqueo duro por señal post-2020 y revisión humana.",
-    liveCondition: "eudrStatus = non_compliant.",
-    changedSignal: "La pantalla EUDR detecta pérdida/cambio de cobertura post-2020.",
-    demoKnobs: "No hay override directo; se fuerza seleccionando este escenario.",
+    description: "Bloqueo por señal post-2020 y revisión humana.",
     icon: ShieldAlert,
   },
   {
     key: "water_stress",
     label: "Estrés hídrico",
-    signal: "S3",
-    description: "Sequía o falta de agua en etapa productiva.",
-    liveCondition: "era5.waterStress = high.",
-    changedSignal: "ERA5 o el modelo climático marca estrés hídrico alto.",
-    demoKnobs: "Temperatura C puede contextualizar el mensaje; el escenario fuerza demo_seeded si el lote no está en high.",
+    description: "Alerta preventiva por sequía o falta de agua.",
     icon: Droplets,
   },
   {
     key: "fungal_risk",
     label: "Riesgo por lluvia",
-    signal: "S5",
     description: "Exceso de lluvia y riesgo preventivo de hongos.",
-    liveCondition: "era5.annualRainfallMm > 3000.",
-    changedSignal: "La lluvia anualizada sube por encima del rango productivo del motor.",
-    demoKnobs: "No hay override de lluvia todavía; se fuerza seleccionando este escenario.",
     icon: BellRing,
   },
   {
     key: "ndvi_drop_money",
     label: "NDVI -> dinero",
-    signal: "S2",
     description: "Caída de verdor explicada como impacto financiero.",
-    liveCondition: "currentNdvi < previousNdvi y la caída es significativa para el lote.",
-    changedSignal: "Sentinel-2 muestra menor verdor/vigor contra la serie reciente.",
-    demoKnobs: "NDVI anterior y NDVI actual simulan la caída; YieldPredict y dinero salen del snapshot.",
     icon: TrendingDown,
   },
   {
     key: "roya_risk",
-    label: "Roya demo",
-    signal: "S1",
-    description: "Riesgo sembrado con humedad/temperatura manual.",
-    liveCondition: "A futuro: temperatura 20-25 C, humedad >80% y/o leaf wetness sostenida.",
-    changedSignal: "No viene completo de Copernicus hoy; requiere humedad/hoja mojada o sensor/local.",
-    demoKnobs: "Temperatura, humedad, variedad y fenología simulan el caso de roya.",
+    label: "Roya",
+    description: "Riesgo por humedad, temperatura y fenología.",
     icon: Leaf,
-  },
-  {
-    key: "explain_roya",
-    label: "Explicar roya",
-    signal: "S1",
-    description: "Mensaje educativo sin recalcular Copernicus.",
-    liveCondition: "El farmer o partner pregunta qué significa la alerta de roya.",
-    changedSignal: "No depende de cambio satelital; es respuesta educativa grounded en KB.",
-    demoKnobs: "No requiere overrides.",
-    icon: Info,
   },
   {
     key: "flowering_positive",
     label: "Floración positiva",
-    signal: "S6",
     description: "Señal positiva de trayectoria productiva.",
-    liveCondition: "Snapshot live/fixture disponible y trayectoria vegetativa positiva.",
-    changedSignal: "Sentinel-2 mantiene vigor sano o detecta recuperación/floración positiva.",
-    demoKnobs: "No requiere overrides; usa el snapshot actual del lote.",
     icon: Sprout,
   },
 ] as const;
 
 type ScenarioKey = (typeof SCENARIOS)[number]["key"];
 
-type ScenarioResponse = {
-  ok: true;
-  scenario: ScenarioKey;
-  signal: string;
-  sourceMode: "fixture" | "live" | "demo_seeded" | "none";
-  demoData: boolean;
-  context: {
-    lot: {
-      code: string;
-      farmName: string;
-      region: string;
-      country: string;
-    };
-    farmer: {
-      name: string;
-      phone: string | null;
-    };
-    snapshot: {
-      riskScore: number | null;
-      eudrStatus: string | null;
-      eligibleForInvestment: boolean;
-      scoreHash: string | null;
-    };
-    publicUrl: string;
-    signals: {
-      currentNdvi: number | null;
-      previousNdvi: number | null;
-      ndviDropPct: number | null;
-      annualRainfallMm: number | null;
-      meanTemperatureC: number | null;
-      waterStress: string | null;
-      yieldRange: string;
-      partnerReturnTotalUsd: number | null;
-      partnerProfitUsd: number | null;
-      farmerProfitUsd: number | null;
-      metadataStatus: string | null;
-    };
-  };
-  knowledge: {
-    title: string;
-    threshold: string;
-    meaning: string;
-    impact: string;
-    action: string;
-    risk: string;
-    guardrails: string[];
-  };
-  message: {
-    templateKey: string;
-    title: string;
-    body: string;
-    guardrails: string[];
-  };
-  whatsapp: {
-    templateKey: string;
-    variables: string[];
-  };
-};
-
 type ApiError = {
   ok?: false;
   error?: string;
   message?: string;
-  details?: unknown;
 };
 
 type SentinelAgentDispatch = {
   ok: true;
-  scenario: ScenarioResponse;
-  sentinelAgent: {
-    ok?: boolean;
-    ai?: {
-      used?: boolean;
-      model?: string | null;
-      source?: string;
-      error?: string | null;
+  scenario: {
+    message: {
+      title: string;
+      body: string;
     };
+    context: {
+      lot: {
+        code: string;
+        farmName: string;
+        region: string;
+      };
+      snapshot: {
+        riskScore: number | null;
+        eudrStatus: string | null;
+      };
+      publicUrl: string;
+      signals: {
+        yieldRange: string;
+      };
+    };
+  };
+  sentinelAgent: {
     gupshup?: {
-      attempted?: boolean;
       delivered?: boolean;
-      dryRun?: boolean;
       destination?: string | null;
       messageId?: string | null;
       error?: string | null;
-      requestPreview?: unknown;
     };
     outbound?: {
       messagePreview?: string;
     };
-    error?: string;
   };
 };
 
@@ -226,19 +135,12 @@ function optionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function formatMoney(value: number | null) {
-  if (value == null) return "pendiente";
-  return `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+function needsNdviOverrides(scenario: ScenarioKey) {
+  return scenario === "ndvi_drop_money";
 }
 
-async function copyText(value: string) {
-  if (!navigator.clipboard?.writeText) return false;
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return false;
-  }
+function needsRoyaOverrides(scenario: ScenarioKey) {
+  return scenario === "roya_risk";
 }
 
 export default function SentinelDemoAdminPage() {
@@ -247,15 +149,10 @@ export default function SentinelDemoAdminPage() {
     useState<ScenarioKey>("ndvi_drop_money");
   const [overrides, setOverrides] = useState(DEFAULT_OVERRIDES);
   const [farmerPhone, setFarmerPhone] = useState("");
-  const [sendMode, setSendMode] = useState<"dry-run" | "send">("dry-run");
-  const [result, setResult] = useState<ScenarioResponse | null>(null);
   const [dispatchResult, setDispatchResult] =
     useState<SentinelAgentDispatch | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
-  const [copied, setCopied] = useState<"message" | "json" | null>(null);
 
   const selected = useMemo(
     () => SCENARIOS.find((scenario) => scenario.key === selectedScenario) ?? SCENARIOS[0],
@@ -271,12 +168,6 @@ export default function SentinelDemoAdminPage() {
     [availableLots, lotCode],
   );
 
-  const rawJson = dispatchResult
-    ? JSON.stringify(dispatchResult, null, 2)
-    : result
-      ? JSON.stringify(result, null, 2)
-      : "";
-
   useEffect(() => {
     if (!lotCode && availableLots.length > 0) {
       const firstCode = availableLots[0]?.code;
@@ -284,61 +175,10 @@ export default function SentinelDemoAdminPage() {
     }
   }, [availableLots, lotCode]);
 
-  async function triggerScenario() {
-    setIsLoading(true);
-    setError(null);
-    setDispatchError(null);
-    setDispatchResult(null);
-    setCopied(null);
-
-    try {
-      const response = await fetch("/api/dashboard/sentinel/scenarios", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          lotCode: lotCode.trim(),
-          scenario: selectedScenario,
-          demoOverrides: {
-            previousNdvi: optionalNumber(overrides.previousNdvi),
-            currentNdvi: optionalNumber(overrides.currentNdvi),
-            temperatureC: optionalNumber(overrides.temperatureC),
-            humidityPct: optionalNumber(overrides.humidityPct),
-            variety: overrides.variety.trim() || undefined,
-            phenologyStage: overrides.phenologyStage.trim() || undefined,
-          },
-        }),
-      });
-
-      const payload = (await response.json().catch(() => null)) as
-        | ScenarioResponse
-        | ApiError
-        | null;
-
-      if (!response.ok || !payload || payload.ok !== true) {
-        const errorPayload = payload as ApiError | null;
-        const message =
-          errorPayload?.error ??
-          errorPayload?.message ??
-          `Scenario request failed with HTTP ${response.status}.`;
-        throw new Error(message);
-      }
-
-      setResult(payload);
-    } catch (cause) {
-      setResult(null);
-      setError(cause instanceof Error ? cause.message : "No se pudo generar la alerta.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   async function sendScenario() {
     setIsDispatching(true);
-    setError(null);
     setDispatchError(null);
-    setCopied(null);
+    setDispatchResult(null);
 
     try {
       const response = await fetch("/api/dashboard/sentinel/scenarios/send", {
@@ -350,7 +190,7 @@ export default function SentinelDemoAdminPage() {
           lotCode: lotCode.trim(),
           scenario: selectedScenario,
           farmerPhone: farmerPhone.trim(),
-          dryRun: sendMode === "dry-run",
+          dryRun: false,
           llm: "auto",
           demoOverrides: {
             previousNdvi: optionalNumber(overrides.previousNdvi),
@@ -377,115 +217,58 @@ export default function SentinelDemoAdminPage() {
         throw new Error(message);
       }
 
-      setResult(payload.scenario);
       setDispatchResult(payload);
     } catch (cause) {
-      setDispatchResult(null);
       setDispatchError(
         cause instanceof Error
           ? cause.message
-          : "No se pudo enviar la alerta por Sentinel Agent.",
+          : "No se pudo enviar la alerta.",
       );
     } finally {
       setIsDispatching(false);
     }
   }
 
-  async function copyMessage() {
-    if (!result?.message.body) return;
-    const ok = await copyText(result.message.body);
-    if (ok) {
-      setCopied("message");
-      window.setTimeout(() => setCopied(null), 1800);
-    }
-  }
-
-  async function copyJson() {
-    if (!rawJson) return;
-    const ok = await copyText(rawJson);
-    if (ok) {
-      setCopied("json");
-      window.setTimeout(() => setCopied(null), 1800);
-    }
-  }
-
   return (
     <main className="min-h-screen bg-[#001020] px-4 py-8 text-[#EEEEEE] md:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
-            <div className="mb-3 flex items-center gap-2">
-              <Badge className="border-primary/25 bg-primary/10 text-primary" variant="outline">
-                Admin demo
-              </Badge>
-              <Badge className="border-cyan-400/25 bg-cyan-400/10 text-cyan-200" variant="outline">
-                Sentinel Agent
-              </Badge>
-            </div>
+            <Badge className="mb-3 border-primary/25 bg-primary/10 text-primary" variant="outline">
+              Admin demo
+            </Badge>
             <h1 className="font-trenda text-3xl font-bold text-white md:text-4xl">
-              Trigger de alertas Copernicus
+              Alertas Copernicus por WhatsApp
             </h1>
-            <p className="mt-2 max-w-3xl text-sm text-white/60 md:text-base">
-              Previsualiza el contexto, base de conocimiento, borrador en español y variables de
-              WhatsApp. También puede ejecutar Sentinel Agent desde este deploy para enviar el
-              mensaje determinístico por Gupshup en dry-run o envío real.
+            <p className="mt-2 max-w-2xl text-sm text-white/55 md:text-base">
+              Selecciona el lote, el número y el tipo de alerta. El mensaje se envía en vivo por
+              Gupshup usando el último snapshot Copernicus del lote.
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              asChild
-              variant="outline"
-              className="border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
-            >
-              <Link href="/dashboard/farmer">
-                <ArrowLeft className="mr-2 size-4" />
-                Volver
-              </Link>
-            </Button>
-            <Button
-              className="bg-primary text-[#001020] hover:bg-primary/90"
-              disabled={isLoading || lotsLoading || !lotCode.trim()}
-              onClick={() => void triggerScenario()}
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <BellRing className="mr-2 size-4" />
-              )}
-              Generar payload
-            </Button>
-            <Button
-              className="bg-emerald-400 text-[#001020] hover:bg-emerald-300"
-              disabled={
-                isDispatching ||
-                lotsLoading ||
-                !lotCode.trim() ||
-                !farmerPhone.trim()
-              }
-              onClick={() => void sendScenario()}
-            >
-              {isDispatching ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <BellRing className="mr-2 size-4" />
-              )}
-              {sendMode === "dry-run" ? "Probar Sentinel Agent" : "Enviar WhatsApp"}
-            </Button>
-          </div>
+          <Button
+            asChild
+            variant="outline"
+            className="border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
+          >
+            <Link href="/dashboard/farmer">
+              <ArrowLeft className="mr-2 size-4" />
+              Volver
+            </Link>
+          </Button>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
           <section className="flex flex-col gap-6">
             <GlassCard className="border-primary/20 bg-white/[0.03] p-5">
               <div className="mb-4 flex items-center gap-2">
                 <Satellite className="size-5 text-primary" />
-                <h2 className="text-lg font-bold text-white">Entrada de prueba</h2>
+                <h2 className="text-lg font-bold text-white">Disparo de alerta</h2>
               </div>
 
               <div className="space-y-4">
-                <div className="block">
+                <label className="block">
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                    Lote disponible
+                    Lote
                   </span>
                   <Select
                     value={lotCode}
@@ -506,549 +289,301 @@ export default function SentinelDemoAdminPage() {
                     <SelectContent>
                       {availableLots.map((lot) => (
                         <SelectItem key={lot.id} value={lot.code ?? String(lot.id)}>
-                          {lot.code ?? `Lote ${lot.id}`} · {lot.farmName} · {lot.region}
+                          {lot.code ?? `Lote ${lot.id}`} · {lot.farmName}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {selectedLot ? (
-                    <div className="mt-3 grid gap-2 border border-white/10 bg-black/15 p-3 text-xs text-white/55">
-                      <div className="flex items-center justify-between gap-3">
-                        <span>Finca</span>
-                        <span className="text-right font-semibold text-white/80">
-                          {selectedLot.farmName}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span>Ubicación</span>
-                        <span className="text-right font-semibold text-white/80">
-                          {selectedLot.region}, {selectedLot.country}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span>Status</span>
-                        <span className="text-right font-semibold text-primary">
-                          {selectedLot.status}
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
+                </label>
 
-                <div className="grid gap-3 border border-emerald-400/20 bg-emerald-400/5 p-4">
-                  <div>
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
-                      WhatsApp destino
-                    </span>
-                    <Input
-                      inputMode="tel"
-                      value={farmerPhone}
-                      placeholder="504XXXXXXXX"
-                      onChange={(event) => setFarmerPhone(event.target.value)}
-                      className="h-10 border-white/15 bg-black/20 text-sm text-white"
-                    />
-                    <p className="mt-2 text-xs leading-relaxed text-white/45">
-                      Para la demo, escribe el número que recibirá el mensaje. El backend de
-                      Harvverse todavía no guarda teléfono del farmer en el contexto del agente.
+                {selectedLot ? (
+                  <div className="rounded-xl border border-white/10 bg-black/15 p-3 text-xs text-white/55">
+                    <p className="font-bold text-white">{selectedLot.farmName}</p>
+                    <p className="mt-1">
+                      {selectedLot.region}, {selectedLot.country} · {selectedLot.status}
                     </p>
                   </div>
-                  <div>
-                    <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
-                      Modo de envío
-                    </span>
-                    <Select
-                      value={sendMode}
-                      onValueChange={(value) =>
-                        setSendMode(value === "send" ? "send" : "dry-run")
-                      }
-                    >
-                      <SelectTrigger className="min-h-11 border-white/15 bg-black/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="dry-run">
-                          Dry-run: arma Gupshup sin enviar
-                        </SelectItem>
-                        <SelectItem value="send">
-                          Envío real por Gupshup
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="mt-2 text-xs leading-relaxed text-white/45">
-                      El envío real requiere credenciales de Gupshup y template aprobado en las
-                      variables de entorno del deploy.
-                    </p>
-                  </div>
-                </div>
+                ) : null}
 
-                <div>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                    Escenario
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Número WhatsApp
                   </span>
-                  <div className="grid gap-2">
-                    {SCENARIOS.map((scenario) => {
-                      const Icon = scenario.icon;
-                      const active = selectedScenario === scenario.key;
-                      return (
-                        <button
-                          key={scenario.key}
-                          type="button"
-                          className={cn(
-                            "flex min-h-16 items-start gap-3 border p-3 text-left transition-colors",
-                            active
-                              ? "border-primary/60 bg-primary/10 text-white"
-                              : "border-white/10 bg-black/15 text-white/65 hover:border-white/25 hover:bg-white/[0.04]",
-                          )}
-                          onClick={() => setSelectedScenario(scenario.key)}
-                        >
-                          <Icon
-                            className={cn(
-                              "mt-0.5 size-4 shrink-0",
-                              active ? "text-primary" : "text-white/40",
-                            )}
+                  <Input
+                    inputMode="tel"
+                    value={farmerPhone}
+                    placeholder="504XXXXXXXX"
+                    onChange={(event) => setFarmerPhone(event.target.value)}
+                    className="h-11 border-white/15 bg-black/20 text-sm text-white"
+                  />
+                </label>
+
+                {(needsNdviOverrides(selectedScenario) || needsRoyaOverrides(selectedScenario)) ? (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                      Variables para simular
+                    </p>
+                    {needsNdviOverrides(selectedScenario) ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="block">
+                          <span className="mb-1 block text-xs text-white/45">NDVI anterior</span>
+                          <Input
+                            inputMode="decimal"
+                            value={overrides.previousNdvi}
+                            onChange={(event) =>
+                              setOverrides((current) => ({
+                                ...current,
+                                previousNdvi: event.target.value,
+                              }))
+                            }
+                            className="h-10 border-white/15 bg-black/20 text-sm text-white"
                           />
-                          <span className="min-w-0">
-                            <span className="flex items-center gap-2 text-sm font-bold">
-                              {scenario.label}
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">
-                                {scenario.signal}
-                              </span>
-                            </span>
-                            <span className="mt-1 block text-xs leading-relaxed text-white/50">
-                              {scenario.description}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-xs text-white/45">NDVI actual</span>
+                          <Input
+                            inputMode="decimal"
+                            value={overrides.currentNdvi}
+                            onChange={(event) =>
+                              setOverrides((current) => ({
+                                ...current,
+                                currentNdvi: event.target.value,
+                              }))
+                            }
+                            className="h-10 border-white/15 bg-black/20 text-sm text-white"
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                    {needsRoyaOverrides(selectedScenario) ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1 block text-xs text-white/45">Temperatura C</span>
+                          <Input
+                            inputMode="decimal"
+                            value={overrides.temperatureC}
+                            onChange={(event) =>
+                              setOverrides((current) => ({
+                                ...current,
+                                temperatureC: event.target.value,
+                              }))
+                            }
+                            className="h-10 border-white/15 bg-black/20 text-sm text-white"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-xs text-white/45">Humedad %</span>
+                          <Input
+                            inputMode="decimal"
+                            value={overrides.humidityPct}
+                            onChange={(event) =>
+                              setOverrides((current) => ({
+                                ...current,
+                                humidityPct: event.target.value,
+                              }))
+                            }
+                            className="h-10 border-white/15 bg-black/20 text-sm text-white"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-xs text-white/45">Variedad</span>
+                          <Input
+                            value={overrides.variety}
+                            onChange={(event) =>
+                              setOverrides((current) => ({
+                                ...current,
+                                variety: event.target.value,
+                              }))
+                            }
+                            className="h-10 border-white/15 bg-black/20 text-sm text-white"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-xs text-white/45">Fenología</span>
+                          <Input
+                            value={overrides.phenologyStage}
+                            onChange={(event) =>
+                              setOverrides((current) => ({
+                                ...current,
+                                phenologyStage: event.target.value,
+                              }))
+                            }
+                            className="h-10 border-white/15 bg-black/20 text-sm text-white"
+                          />
+                        </label>
+                      </div>
+                    ) : null}
                   </div>
-                </div>
+                ) : null}
 
-                <div className="border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                    Cuándo se dispara
-                  </p>
-                  <div className="mt-3 space-y-3 text-sm leading-relaxed">
-                    <p className="text-white/75">
-                      <span className="font-semibold text-white">Condición real:</span>{" "}
-                      {selected.liveCondition}
-                    </p>
-                    <p className="text-white/60">
-                      <span className="font-semibold text-white/85">Qué cambia:</span>{" "}
-                      {selected.changedSignal}
-                    </p>
-                    <p className="text-white/60">
-                      <span className="font-semibold text-white/85">Override demo:</span>{" "}
-                      {selected.demoKnobs}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </GlassCard>
-
-            <GlassCard className="border-white/10 bg-white/[0.03] p-5">
-              <h2 className="mb-4 text-lg font-bold text-white">Overrides para demo</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1 block text-xs text-white/45">NDVI anterior</span>
-                  <Input
-                    inputMode="decimal"
-                    value={overrides.previousNdvi}
-                    onChange={(event) =>
-                      setOverrides((current) => ({
-                        ...current,
-                        previousNdvi: event.target.value,
-                      }))
-                    }
-                    className="h-10 border-white/15 bg-black/20 text-sm text-white"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs text-white/45">NDVI actual</span>
-                  <Input
-                    inputMode="decimal"
-                    value={overrides.currentNdvi}
-                    onChange={(event) =>
-                      setOverrides((current) => ({
-                        ...current,
-                        currentNdvi: event.target.value,
-                      }))
-                    }
-                    className="h-10 border-white/15 bg-black/20 text-sm text-white"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs text-white/45">Temperatura C</span>
-                  <Input
-                    inputMode="decimal"
-                    value={overrides.temperatureC}
-                    onChange={(event) =>
-                      setOverrides((current) => ({
-                        ...current,
-                        temperatureC: event.target.value,
-                      }))
-                    }
-                    className="h-10 border-white/15 bg-black/20 text-sm text-white"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs text-white/45">Humedad %</span>
-                  <Input
-                    inputMode="decimal"
-                    value={overrides.humidityPct}
-                    onChange={(event) =>
-                      setOverrides((current) => ({
-                        ...current,
-                        humidityPct: event.target.value,
-                      }))
-                    }
-                    className="h-10 border-white/15 bg-black/20 text-sm text-white"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs text-white/45">Variedad</span>
-                  <Input
-                    value={overrides.variety}
-                    onChange={(event) =>
-                      setOverrides((current) => ({
-                        ...current,
-                        variety: event.target.value,
-                      }))
-                    }
-                    className="h-10 border-white/15 bg-black/20 text-sm text-white"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs text-white/45">Fenología</span>
-                  <Input
-                    value={overrides.phenologyStage}
-                    onChange={(event) =>
-                      setOverrides((current) => ({
-                        ...current,
-                        phenologyStage: event.target.value,
-                      }))
-                    }
-                    className="h-10 border-white/15 bg-black/20 text-sm text-white"
-                  />
-                </label>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-white/45">
-                Estos valores solo fuerzan escenarios de demo. El contexto base siempre sale del
-                snapshot Copernicus más reciente del lote.
-              </p>
-            </GlassCard>
-
-            <GlassCard className="border-white/10 bg-white/[0.03] p-5">
-              <h2 className="mb-2 text-lg font-bold text-white">Matriz de triggers</h2>
-              <p className="mb-4 text-xs leading-relaxed text-white/45">
-                Esta tabla separa las reglas reales de los campos que usamos para simular una alerta
-                durante la demo local.
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-white/10 text-white/45">
-                      <th className="py-2 pr-3 font-semibold uppercase tracking-[0.14em]">
-                        Alerta
-                      </th>
-                      <th className="px-3 py-2 font-semibold uppercase tracking-[0.14em]">
-                        Condición real
-                      </th>
-                      <th className="px-3 py-2 font-semibold uppercase tracking-[0.14em]">
-                        Qué tiene que cambiar
-                      </th>
-                      <th className="py-2 pl-3 font-semibold uppercase tracking-[0.14em]">
-                        Demo
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SCENARIOS.map((scenario) => (
-                      <tr
-                        key={scenario.key}
-                        className={cn(
-                          "border-b border-white/10 align-top",
-                          selectedScenario === scenario.key ? "bg-primary/5" : "",
-                        )}
-                      >
-                        <td className="py-3 pr-3">
-                          <button
-                            type="button"
-                            className="text-left font-semibold text-primary hover:underline"
-                            onClick={() => setSelectedScenario(scenario.key)}
-                          >
-                            {scenario.label}
-                          </button>
-                          <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/35">
-                            {scenario.signal}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 leading-relaxed text-white/65">
-                          {scenario.liveCondition}
-                        </td>
-                        <td className="px-3 py-3 leading-relaxed text-white/55">
-                          {scenario.changedSignal}
-                        </td>
-                        <td className="py-3 pl-3 leading-relaxed text-white/55">
-                          {scenario.demoKnobs}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Button
+                  className="h-12 w-full bg-emerald-400 font-black text-[#001020] hover:bg-emerald-300"
+                  disabled={
+                    isDispatching ||
+                    lotsLoading ||
+                    !lotCode.trim() ||
+                    !farmerPhone.trim()
+                  }
+                  onClick={() => void sendScenario()}
+                >
+                  {isDispatching ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <BellRing className="mr-2 size-4" />
+                  )}
+                  Enviar WhatsApp
+                </Button>
               </div>
             </GlassCard>
           </section>
 
           <section className="flex flex-col gap-6">
             <GlassCard className="border-primary/20 bg-white/[0.03] p-5">
-              <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+              <h2 className="mb-4 text-lg font-bold text-white">Escenario</h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {SCENARIOS.map((scenario) => {
+                  const Icon = scenario.icon;
+                  const active = selectedScenario === scenario.key;
+                  return (
+                    <button
+                      key={scenario.key}
+                      type="button"
+                      className={cn(
+                        "flex min-h-28 flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors",
+                        active
+                          ? "border-primary/60 bg-primary/10 text-white"
+                          : "border-white/10 bg-black/15 text-white/65 hover:border-white/25 hover:bg-white/[0.04]",
+                      )}
+                      onClick={() => {
+                        setSelectedScenario(scenario.key);
+                        setDispatchResult(null);
+                        setDispatchError(null);
+                      }}
+                    >
+                      <Icon className={cn("size-5", active ? "text-primary" : "text-white/40")} />
+                      <span>
+                        <span className="block text-sm font-bold">{scenario.label}</span>
+                        <span className="mt-1 block text-xs leading-relaxed text-white/50">
+                          {scenario.description}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </GlassCard>
+
+            <GlassCard className="border-white/10 bg-white/[0.03] p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
                     {selected.label}
                   </p>
-                  <h2 className="mt-1 text-2xl font-bold text-white">Resultado del trigger</h2>
+                  <h2 className="mt-1 text-2xl font-bold text-white">
+                    Resultado
+                  </h2>
                 </div>
-                {result ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Badge className="border-white/15 bg-white/5 text-white" variant="outline">
-                      {result.sourceMode}
-                    </Badge>
-                    <Badge
-                      className={
-                        result.demoData
-                          ? "border-yellow-400/25 bg-yellow-400/10 text-yellow-200"
-                          : "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
-                      }
-                      variant="outline"
-                    >
-                      {result.demoData ? "demo seeded" : "live context"}
-                    </Badge>
-                  </div>
+                {dispatchResult?.sentinelAgent.gupshup?.delivered ? (
+                  <Badge className="border-emerald-400/25 bg-emerald-400/10 text-emerald-200" variant="outline">
+                    Enviado
+                  </Badge>
                 ) : null}
               </div>
 
-              {error ? (
-                <div className="border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-200">
-                  {error}
-                </div>
-              ) : null}
               {dispatchError ? (
-                <div className="mt-3 border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-200">
+                <div className="border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-200">
                   {dispatchError}
                 </div>
               ) : null}
 
-              {!result && !error ? (
-                <div className="flex min-h-80 flex-col items-center justify-center border border-dashed border-white/10 bg-black/10 p-8 text-center">
+              {!dispatchResult && !dispatchError ? (
+                <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 p-8 text-center">
                   <BellRing className="mb-4 size-10 text-white/25" />
                   <p className="max-w-md text-sm text-white/55">
-                    Escoge un lote y un escenario para preparar el payload que verá WhatsApp/AI SDK.
+                    Selecciona un escenario y presiona Enviar WhatsApp para disparar la alerta en vivo.
                   </p>
                 </div>
               ) : null}
 
-              {result ? (
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="border border-white/10 bg-black/15 p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-white/40">Lote</p>
-                    <p className="mt-2 text-lg font-bold text-white">{result.context.lot.code}</p>
-                    <p className="text-sm text-white/55">
-                      {result.context.lot.farmName} · {result.context.lot.region}
-                    </p>
-                  </div>
-                  <div className="border border-white/10 bg-black/15 p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-white/40">Score</p>
-                    <p className="mt-2 text-lg font-bold text-white">
-                      {result.context.snapshot.riskScore ?? "pendiente"}/100
-                    </p>
-                    <p className="text-sm text-white/55">
-                      EUDR {result.context.snapshot.eudrStatus ?? "pendiente"}
-                    </p>
-                  </div>
-                  <div className="border border-white/10 bg-black/15 p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-white/40">Yield</p>
-                    <p className="mt-2 text-lg font-bold text-white">
-                      {result.context.signals.yieldRange}
-                    </p>
-                    <p className="text-sm text-white/55">
-                      Partner {formatMoney(result.context.signals.partnerReturnTotalUsd)}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-
               {dispatchResult ? (
-                <div className="mt-4 grid gap-3 border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm md:grid-cols-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-emerald-200/70">
-                      Gupshup
-                    </p>
-                    <p className="mt-1 font-bold text-white">
-                      {dispatchResult.sentinelAgent.gupshup?.delivered
-                        ? "Delivered"
-                        : dispatchResult.sentinelAgent.gupshup?.dryRun
-                          ? "Dry-run"
-                          : "Not delivered"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-emerald-200/70">
-                      Destino
-                    </p>
-                    <p className="mt-1 break-all font-bold text-white">
-                      {dispatchResult.sentinelAgent.gupshup?.destination ?? "pendiente"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-emerald-200/70">
-                      AI SDK
-                    </p>
-                    <p className="mt-1 font-bold text-white">
-                      {dispatchResult.sentinelAgent.ai?.used
-                        ? dispatchResult.sentinelAgent.ai.model ?? "used"
-                        : "sin LLM"}
-                    </p>
-                  </div>
-                  {dispatchResult.sentinelAgent.gupshup?.messageId ? (
-                    <div className="md:col-span-3">
-                      <p className="text-xs uppercase tracking-[0.16em] text-emerald-200/70">
-                        Message ID
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-white/10 bg-black/15 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-white/40">Lote</p>
+                      <p className="mt-2 font-bold text-white">
+                        {dispatchResult.scenario.context.lot.code}
                       </p>
-                      <p className="mt-1 break-all font-mono text-xs text-white/70">
-                        {dispatchResult.sentinelAgent.gupshup.messageId}
+                      <p className="text-xs text-white/50">
+                        {dispatchResult.scenario.context.lot.farmName}
                       </p>
                     </div>
+                    <div className="rounded-xl border border-white/10 bg-black/15 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-white/40">Score</p>
+                      <p className="mt-2 font-bold text-white">
+                        {dispatchResult.scenario.context.snapshot.riskScore ?? "pendiente"}/100
+                      </p>
+                      <p className="text-xs text-white/50">
+                        EUDR {dispatchResult.scenario.context.snapshot.eudrStatus ?? "pendiente"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/15 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-white/40">Yield</p>
+                      <p className="mt-2 font-bold text-white">
+                        {dispatchResult.scenario.context.signals.yieldRange}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                      Mensaje enviado
+                    </p>
+                    <h3 className="mt-2 text-xl font-bold text-white">
+                      {dispatchResult.scenario.message.title}
+                    </h3>
+                    <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-white/75">
+                      {dispatchResult.sentinelAgent.outbound?.messagePreview ??
+                        dispatchResult.scenario.message.body}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm">
+                      <p className="text-xs uppercase tracking-[0.16em] text-emerald-200/70">
+                        Destino
+                      </p>
+                      <p className="mt-1 break-all font-bold text-white">
+                        {dispatchResult.sentinelAgent.gupshup?.destination ?? farmerPhone}
+                      </p>
+                    </div>
+                    <a
+                      href={dispatchResult.scenario.context.publicUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl border border-white/10 bg-black/15 p-4 text-sm transition-colors hover:border-primary/35 hover:bg-primary/5"
+                    >
+                      <p className="text-xs uppercase tracking-[0.16em] text-white/40">
+                        QR público
+                      </p>
+                      <p className="mt-1 break-all font-bold text-primary">
+                        Abrir prueba del lote
+                      </p>
+                    </a>
+                  </div>
+
+                  {dispatchResult.sentinelAgent.gupshup?.messageId ? (
+                    <p className="break-all rounded-xl border border-white/10 bg-black/15 p-3 font-mono text-xs text-white/50">
+                      {dispatchResult.sentinelAgent.gupshup.messageId}
+                    </p>
                   ) : null}
                   {dispatchResult.sentinelAgent.gupshup?.error ? (
-                    <div className="md:col-span-3 border border-yellow-400/25 bg-yellow-400/10 p-3 text-yellow-100">
+                    <div className="border border-yellow-400/25 bg-yellow-400/10 p-3 text-sm text-yellow-100">
                       {dispatchResult.sentinelAgent.gupshup.error}
                     </div>
                   ) : null}
                 </div>
               ) : null}
             </GlassCard>
-
-            {result ? (
-              <>
-                <GlassCard className="border-primary/20 bg-white/[0.03] p-5">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                        Mensaje deterministic
-                      </p>
-                      <h3 className="mt-1 text-xl font-bold text-white">{result.message.title}</h3>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="border-primary/30 text-primary hover:bg-primary/10"
-                      onClick={() => void copyMessage()}
-                    >
-                      <Copy className="mr-2 size-4" />
-                      {copied === "message" ? "Copiado" : "Copiar"}
-                    </Button>
-                  </div>
-                  <Textarea
-                    readOnly
-                    value={result.message.body}
-                    className="min-h-32 resize-none border-white/15 bg-black/20 text-sm leading-relaxed text-white"
-                  />
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <div className="border border-white/10 bg-black/15 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/40">
-                        Guardrails
-                      </p>
-                      <ul className="space-y-1 text-xs leading-relaxed text-white/55">
-                        {result.message.guardrails.map((guardrail) => (
-                          <li key={guardrail}>- {guardrail}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="border border-white/10 bg-black/15 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/40">
-                        QR público
-                      </p>
-                      <a
-                        href={result.context.publicUrl}
-                        className="break-all text-sm font-semibold text-primary hover:underline"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {result.context.publicUrl}
-                      </a>
-                    </div>
-                  </div>
-                </GlassCard>
-
-                <div className="grid gap-6 xl:grid-cols-2">
-                  <GlassCard className="border-white/10 bg-white/[0.03] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                      Base de conocimiento
-                    </p>
-                    <h3 className="mt-1 text-xl font-bold text-white">
-                      {result.knowledge.title}
-                    </h3>
-                    <div className="mt-4 space-y-3 text-sm leading-relaxed text-white/60">
-                      <p>
-                        <span className="font-semibold text-white/85">Umbral:</span>{" "}
-                        {result.knowledge.threshold}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-white/85">Qué significa:</span>{" "}
-                        {result.knowledge.meaning}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-white/85">Impacto:</span>{" "}
-                        {result.knowledge.impact}
-                      </p>
-                      <p>
-                        <span className="font-semibold text-white/85">Acción:</span>{" "}
-                        {result.knowledge.action}
-                      </p>
-                    </div>
-                  </GlassCard>
-
-                  <GlassCard className="border-white/10 bg-white/[0.03] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                      WhatsApp template
-                    </p>
-                    <h3 className="mt-1 text-xl font-bold text-white">
-                      {result.whatsapp.templateKey}
-                    </h3>
-                    <div className="mt-4 space-y-2">
-                      {result.whatsapp.variables.map((variable, index) => (
-                        <div
-                          key={`${variable}-${index}`}
-                          className="grid grid-cols-[48px_1fr] gap-3 border border-white/10 bg-black/15 p-2 text-xs"
-                        >
-                          <span className="font-semibold text-primary">{`{{${index + 1}}}`}</span>
-                          <span className="break-words text-white/65">{variable}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </GlassCard>
-                </div>
-
-                <GlassCard className="border-white/10 bg-white/[0.03] p-5">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-xl font-bold text-white">Payload JSON</h3>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="border-primary/30 text-primary hover:bg-primary/10"
-                      onClick={() => void copyJson()}
-                    >
-                      <Copy className="mr-2 size-4" />
-                      {copied === "json" ? "Copiado" : "Copiar JSON"}
-                    </Button>
-                  </div>
-                  <pre className="max-h-[520px] overflow-auto border border-white/10 bg-black/35 p-4 text-xs leading-relaxed text-white/65">
-                    {rawJson}
-                  </pre>
-                </GlassCard>
-              </>
-            ) : null}
           </section>
         </div>
       </div>

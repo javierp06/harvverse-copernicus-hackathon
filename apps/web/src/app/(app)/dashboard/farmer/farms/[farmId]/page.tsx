@@ -230,88 +230,75 @@ export default function FarmerFarmDetailPage() {
             </GlassCard>
           )}
 
-          <GlassCard className="mb-6 border-primary/20 bg-white/[0.03] p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="section-title text-xl md:text-2xl">
-                {t("farm_details_title")}
-              </h2>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 border-white/15 text-white/75 hover:bg-white/10 hover:text-white"
-                onClick={() => router.push(`/dashboard/farmer/farms/${farm.id}/edit`)}
-              >
-                <Edit3 className="mr-2 size-4" />
-                {t("edit_details_cta")}
-              </Button>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("farm_code")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.farmCode || "—"}</p>
+          <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
+            <GlassCard className="border-primary/20 bg-white/[0.03] p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="section-title text-xl md:text-2xl">
+                  {t("farm_details_title")}
+                </h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 border-white/15 text-white/75 hover:bg-white/10 hover:text-white"
+                  onClick={() => router.push(`/dashboard/farmer/farms/${farm.id}/edit`)}
+                >
+                  <Edit3 className="mr-2 size-4" />
+                  {t("edit_details_cta")}
+                </Button>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("varieties")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.varieties?.join(", ") || "—"}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  [t("farm_code"), farm.farmCode || "—", false],
+                  [t("department"), farm.department || "—", false],
+                  [t("municipality"), farm.municipality || "—", false],
+                  [t("total_area"), farm.totalArea ? `${farm.totalArea} ha` : "—", true],
+                  [t("altitude"), farm.altitudeMasl ? `${farm.altitudeMasl} m` : "—", true],
+                  [t("water_source"), farm.waterSource || "—", false],
+                  [t("road_access"), farm.roadAccess || "—", false],
+                  [t("shade_trees"), farm.shadeTrees || "—", false],
+                  [
+                    t("previous_total_production_qq"),
+                    farm.previousTotalProductionQq ? `${farm.previousTotalProductionQq} qq` : "—",
+                    false,
+                  ],
+                  [t("production_data_year"), farm.productionDataYear || "—", false],
+                ].map(([label, value, highlight]) => (
+                  <div key={String(label)} className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+                      {label}
+                    </p>
+                    <p className={`mt-1 break-words text-sm font-bold ${highlight ? "text-primary" : "text-white"}`}>
+                      {value}
+                    </p>
+                  </div>
+                ))}
+                <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:col-span-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("varieties")}</p>
+                  <p className="mt-1 text-sm font-bold text-white">{farm.varieties?.join(", ") || "—"}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:col-span-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("certifications")}</p>
+                  <p className="mt-1 text-sm font-bold text-white">{farm.certifications?.join(", ") || "—"}</p>
+                </div>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("certifications")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.certifications?.join(", ") || "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("total_area")}</p>
-                <p className="mt-1 text-sm font-bold text-primary">{farm.totalArea ? `${farm.totalArea} ha` : "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("altitude")}</p>
-                <p className="mt-1 text-sm font-bold text-primary">{farm.altitudeMasl ? `${farm.altitudeMasl} m` : "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("department")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.department || "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("municipality")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.municipality || "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("water_source")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.waterSource || "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("road_access")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.roadAccess || "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("shade_trees")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.shadeTrees || "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("previous_total_production_qq")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.previousTotalProductionQq ? `${farm.previousTotalProductionQq} qq` : "—"}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">{t("production_data_year")}</p>
-                <p className="mt-1 text-sm font-bold text-white">{farm.productionDataYear || "—"}</p>
-              </div>
-            </div>
-            {farm.description ? (
-              <p className="mt-4 text-sm leading-relaxed text-white/65">
-                {farm.description}
-              </p>
-            ) : null}
-          </GlassCard>
-
-          {farm.polygon ? (
-            <GlassCard className="mb-6 border-primary/20 bg-white/[0.03] p-5">
-              <h2 className="section-title mb-4 text-xl md:text-2xl">
-                {t("location_title")}
-              </h2>
-              <div className="h-96 overflow-hidden rounded-xl border border-white/10">
-                <PolygonDisplayMap polygon={farm.polygon as Polygon} />
-              </div>
+              {farm.description ? (
+                <p className="mt-4 rounded-xl border border-white/10 bg-black/15 p-4 text-sm leading-relaxed text-white/65">
+                  {farm.description}
+                </p>
+              ) : null}
             </GlassCard>
-          ) : null}
+
+            {farm.polygon ? (
+              <GlassCard className="border-primary/20 bg-white/[0.03] p-5">
+                <h2 className="section-title mb-4 text-xl md:text-2xl">
+                  {t("location_title")}
+                </h2>
+                <div className="h-[360px] overflow-hidden rounded-xl border border-white/10 xl:h-[520px]">
+                  <PolygonDisplayMap polygon={farm.polygon as Polygon} />
+                </div>
+              </GlassCard>
+            ) : null}
+          </div>
 
           <GlassCard className="mb-6 border-primary/20 bg-white/[0.03] p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
