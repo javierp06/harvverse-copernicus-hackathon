@@ -1,5 +1,5 @@
 /**
- * setup-demo.ts — Deploy contracts to a local Hardhat node and configure the demo environment.
+ * setup-demo.ts — Deploy contracts to Hardhat or Base Sepolia and configure the demo environment.
  *
  * Usage:
  *   npx hardhat node              (in a separate terminal)
@@ -10,7 +10,7 @@
  *  2. Grants OPERATOR_ROLE on HarvverseLot to the Partnership contract
  *  3. Registers the Finca Zafiro lot (HV-HN-ZAF-L02) on-chain
  *  4. Mints 10,000 mock USDC to the demo partner wallet (Hardhat accounts[1])
- *  5. Saves addresses to deployments/hardhat.json and apps/web/public/contracts/hardhat.json
+ *  5. Saves addresses to deployments/<network>.json and apps/web/public/contracts/<network>.json
  *  6. Updates apps/web/.env with NEXT_PUBLIC_ vars so the UI can find the contracts
  */
 
@@ -157,20 +157,21 @@ async function main() {
 
   const deploymentsDir = path.join(__dirname, "../deployments");
   if (!fs.existsSync(deploymentsDir)) fs.mkdirSync(deploymentsDir, { recursive: true });
+  const deploymentFileName = `${network.name}.json`;
   fs.writeFileSync(
-    path.join(deploymentsDir, "hardhat.json"),
+    path.join(deploymentsDir, deploymentFileName),
     JSON.stringify(deploymentData, null, 2),
   );
 
   const publicContractsDir = path.join(__dirname, "../../../apps/web/public/contracts");
   if (!fs.existsSync(publicContractsDir)) fs.mkdirSync(publicContractsDir, { recursive: true });
   fs.writeFileSync(
-    path.join(publicContractsDir, "hardhat.json"),
+    path.join(publicContractsDir, deploymentFileName),
     JSON.stringify(deploymentData, null, 2),
   );
 
-  console.log(`\nDeployment saved → deployments/hardhat.json`);
-  console.log(`Deployment saved → apps/web/public/contracts/hardhat.json`);
+  console.log(`\nDeployment saved → deployments/${deploymentFileName}`);
+  console.log(`Deployment saved → apps/web/public/contracts/${deploymentFileName}`);
 
   // 6 — Update apps/web/.env with NEXT_PUBLIC_ vars
   const envPath = path.join(__dirname, "../../../apps/web/.env");
@@ -191,7 +192,7 @@ async function main() {
 
   const newVars = [
     "",
-    "# Local Hardhat demo contracts — written by pnpm setup:demo",
+    `# ${network.name} demo contracts — written by pnpm setup:${network.name === "hardhat" ? "demo" : "base-sepolia"}`,
     `NEXT_PUBLIC_USE_LOCAL_CONTRACTS=${network.name === "hardhat" ? "true" : "false"}`,
     `NEXT_PUBLIC_HARDHAT_CHAIN_ID=${deploymentData.chainId}`,
     `NEXT_PUBLIC_USDC_ADDRESS=${usdcAddress}`,
