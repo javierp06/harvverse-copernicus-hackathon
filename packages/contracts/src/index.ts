@@ -567,11 +567,93 @@ export const HarvverseEvidenceAbi = [
   },
 ] as const;
 
+export const HarvverseCarbonCreditAbi = [
+  {
+    inputs: [{ internalType: "address", name: "admin", type: "address" }],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "bytes32", name: "lotId", type: "bytes32" },
+      { indexed: true, internalType: "address", name: "recipient", type: "address" },
+      { indexed: true, internalType: "bytes32", name: "scoreHash", type: "bytes32" },
+      { indexed: false, internalType: "bytes32", name: "carbonHash", type: "bytes32" },
+      { indexed: false, internalType: "uint32", name: "amountHundredths", type: "uint32" },
+      { indexed: false, internalType: "string", name: "evidenceUri", type: "string" },
+    ],
+    name: "CarbonCreditIssued",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "address", name: "from", type: "address" },
+      { indexed: true, internalType: "address", name: "to", type: "address" },
+      { indexed: false, internalType: "uint256", name: "value", type: "uint256" },
+    ],
+    name: "Transfer",
+    type: "event",
+  },
+  {
+    inputs: [
+      { internalType: "bytes32", name: "lotId", type: "bytes32" },
+      { internalType: "address", name: "recipient", type: "address" },
+      { internalType: "bytes32", name: "scoreHash", type: "bytes32" },
+      { internalType: "bytes32", name: "carbonHash", type: "bytes32" },
+      { internalType: "uint32", name: "amountHundredths", type: "uint32" },
+      { internalType: "string", name: "evidenceUri", type: "string" },
+    ],
+    name: "issueCredit",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "decimals",
+    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+    stateMutability: "pure",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "bytes32", name: "", type: "bytes32" }],
+    name: "issuedHundredthsByLot",
+    outputs: [{ internalType: "uint32", name: "", type: "uint32" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "name",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "symbol",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
 export type DeploymentAddresses = {
   mockUsdc: `0x${string}`;
   harvverseLot: `0x${string}`;
   harvversePartnership: `0x${string}`;
   harvverseEvidence: `0x${string}`;
+  carbonEstimateRegistry?: `0x${string}`;
+  harvverseCarbonCredit?: `0x${string}`;
   chainId: number;
   network: string;
 };

@@ -42,8 +42,15 @@ async function main() {
   const carbonRegistryAddress = await carbonRegistry.getAddress();
   console.log(`CarbonEstimateRegistry deployed to: ${carbonRegistryAddress}`);
 
+  const HarvverseCarbonCredit = await ethers.getContractFactory("HarvverseCarbonCredit");
+  const carbonCredit = await HarvverseCarbonCredit.deploy(deployer.address);
+  await carbonCredit.waitForDeployment();
+  const carbonCreditAddress = await carbonCredit.getAddress();
+  console.log(`HarvverseCarbonCredit deployed to: ${carbonCreditAddress}`);
+
   const deployments = {
     network: network.name,
+    chainId: network.config.chainId ?? 31337,
     deployer: deployer.address,
     contracts: {
       MockUSDC: usdcAddress,
@@ -51,6 +58,7 @@ async function main() {
       HarvversePartnership: partnershipAddress,
       HarvverseEvidence: evidenceAddress,
       CarbonEstimateRegistry: carbonRegistryAddress,
+      HarvverseCarbonCredit: carbonCreditAddress,
     },
   };
 

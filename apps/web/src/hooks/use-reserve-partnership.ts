@@ -135,7 +135,7 @@ export function useReservePartnership(params: {
       // 3 — Persist to DB: proposal → partnership → lot status
       setStep("saving");
 
-      const chainKey = "hardhat" as const;
+      const chainKey = chainId === 84532 ? "baseSepolia" : "hardhat";
 
       let proposalId: number;
 

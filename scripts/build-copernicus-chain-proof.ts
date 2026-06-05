@@ -178,6 +178,21 @@ const proof = {
             evidenceUri: `harvverse://copernicus/${lotCode}/carbon`,
           },
         },
+  carbonCredit:
+    carbonCapture == null || carbonHash == null
+      ? null
+      : {
+          contract: "HarvverseCarbonCredit",
+          functionName: "issueCredit",
+          args: {
+            lotId,
+            recipient: process.env.CARBON_CREDIT_RECIPIENT ?? "<farmer-wallet>",
+            scoreHash,
+            carbonHash,
+            amountHundredths: toHundredths(carbonCapture.totalTCo2ePerYear),
+            evidenceUri: `harvverse://copernicus/${lotCode}/carbon`,
+          },
+        },
   dbMarker: {
     scoreHash: scoreHash.slice(2),
     chainId,

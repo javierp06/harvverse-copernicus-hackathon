@@ -6,6 +6,7 @@ import type {
   HarvverseLot,
   HarvversePartnership,
   HarvverseEvidence,
+  HarvverseCarbonCredit,
 } from "../typechain-types";
 
 // Finca Zafiro scenario constants
@@ -39,6 +40,7 @@ describe("Harvverse — Finca Zafiro happy path", function () {
   let partnership: HarvversePartnership;
   let evidence: HarvverseEvidence;
   let carbonRegistry: CarbonEstimateRegistry;
+  let carbonCredit: HarvverseCarbonCredit;
 
   let admin: Awaited<ReturnType<typeof ethers.getSigner>>;
   let farmer: Awaited<ReturnType<typeof ethers.getSigner>>;
@@ -75,6 +77,9 @@ describe("Harvverse — Finca Zafiro happy path", function () {
 
     const CarbonEstimateRegistry = await ethers.getContractFactory("CarbonEstimateRegistry");
     carbonRegistry = await CarbonEstimateRegistry.deploy(admin.address);
+
+    const HarvverseCarbonCredit = await ethers.getContractFactory("HarvverseCarbonCredit");
+    carbonCredit = await HarvverseCarbonCredit.deploy(admin.address);
 
     // Grant OPERATOR_ROLE on HarvverseLot to Partnership (so it can update status)
     await lotContract.connect(admin).grantRole(OPERATOR_ROLE, await partnership.getAddress());
@@ -240,6 +245,92 @@ describe("Harvverse — Finca Zafiro happy path", function () {
           "ipfs://carbon-estimate/finca-zafiro-lot-1"
         )
     ).to.be.revertedWith("Invalid carbon state");
+  });
+
+  it("operator issues HC carbon credit tokens from recorded carbon evidence", async function () {
+    await expect(
+      carbonCredit
+        .connect(admin)
+        .issueCredit(
+          LOT_ID,
+          farmer.address,
+          SCORE_HASH,
+          CARBON_HASH,
+          TOTAL_TCO2E_PER_YEAR_HUNDREDTHS,
+          "ipfs://carbon-estimate/finca-zafiro-lot-1"
+        )
+    )
+      .to.emit(carbonCredit, "CarbonCreditIssued")
+      .withArgs(
+        LOT_ID,
+        farmer.address,
+        SCORE_HASH,
+        CARBON_HASH,
+        TOTAL_TCO2E_PER_YEAR_HUNDREDTHS,
+        "ipfs://carbon-estimate/finca-zafiro-lot-1"
+      );
+
+    expect(await carbonCredit.name()).to.equal("Harvverse Carbon Credit");
+    expect(await carbonCredit.symbol()).to.equal("HC");
+    expect(await carbonCredit.decimals()).to.equal(2n);
+    expect(await carbonCredit.balanceOf(farmer.address)).to.equal(TOTAL_TCO2E_PER_YEAR_HUNDREDTHS);
+    expect(await carbonCredit.issuedHundredthsByLot(LOT_ID)).to.equal(
+      TOTAL_TCO2E_PER_YEAR_HUNDREDTHS,
+    );
+  });
+
+  it("rejects invalid HC carbon credit issuance", async function () {
+    await expect(
+      carbonCredit
+        .connect(partner)
+        .issueCredit(
+          LOT_ID,
+          partner.address,
+          SCORE_HASH,
+          CARBON_HASH,
+          TOTAL_TCO2E_PER_YEAR_HUNDREDTHS,
+          "ipfs://carbon-estimate/finca-zafiro-lot-1"
+        )
+    ).to.be.reverted;
+
+    await expect(
+      carbonCredit
+        .connect(admin)
+        .issueCredit(
+          LOT_ID,
+          ethers.ZeroAddress,
+          SCORE_HASH,
+          CARBON_HASH,
+          TOTAL_TCO2E_PER_YEAR_HUNDREDTHS,
+          "ipfs://carbon-estimate/finca-zafiro-lot-1"
+        )
+    ).to.be.revertedWith("Recipient required");
+
+    await expect(
+      carbonCredit
+        .connect(admin)
+        .issueCredit(
+          LOT_ID,
+          farmer.address,
+          SCORE_HASH,
+          CARBON_HASH,
+          0,
+          "ipfs://carbon-estimate/finca-zafiro-lot-1"
+        )
+    ).to.be.revertedWith("Amount required");
+
+    await expect(
+      carbonCredit
+        .connect(admin)
+        .issueCredit(
+          LOT_ID,
+          farmer.address,
+          SCORE_HASH,
+          CARBON_HASH,
+          TOTAL_TCO2E_PER_YEAR_HUNDREDTHS,
+          ""
+        )
+    ).to.be.revertedWith("Evidence URI required");
   });
 
   it("rejects invalid Copernicus score metadata", async function () {

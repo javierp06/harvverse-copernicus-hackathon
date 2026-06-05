@@ -127,6 +127,11 @@ async function main() {
   await carbonRegistry.waitForDeployment();
   const carbonRegistryAddress = await carbonRegistry.getAddress();
 
+  const HarvverseCarbonCredit = await ethers.getContractFactory("HarvverseCarbonCredit");
+  const carbonCredit = await HarvverseCarbonCredit.deploy(deployer.address);
+  await carbonCredit.waitForDeployment();
+  const carbonCreditAddress = await carbonCredit.getAddress();
+
   await lotContract.createLot(
     lotId,
     deployer.address,
@@ -170,13 +175,24 @@ async function main() {
             `harvverse://copernicus/${lotCode}/carbon`,
           );
           const receipt = await tx.wait();
+          const tokenTx = await carbonCredit.issueCredit(
+            lotId,
+            deployer.address,
+            scoreHash,
+            carbonHash,
+            totalTCo2ePerYearHundredths,
+            `harvverse://copernicus/${lotCode}/carbon`,
+          );
+          const tokenReceipt = await tokenTx.wait();
           const stored = await carbonRegistry.getCarbonEstimate(lotId);
+          const tokenBalance = await carbonCredit.balanceOf(deployer.address);
           return {
             ok:
               stored.scoreHash.toLowerCase() === scoreHash.toLowerCase() &&
               stored.carbonHash.toLowerCase() === carbonHash.toLowerCase() &&
               Number(stored.tCo2ePerHaYearHundredths) === tCo2ePerHaYearHundredths &&
-              Number(stored.totalTCo2ePerYearHundredths) === totalTCo2ePerYearHundredths,
+              Number(stored.totalTCo2ePerYearHundredths) === totalTCo2ePerYearHundredths &&
+              Number(tokenBalance) >= totalTCo2ePerYearHundredths,
             transactionHash: receipt?.hash ?? tx.hash,
             contractAddress: carbonRegistryAddress,
             carbonHash,
@@ -184,6 +200,13 @@ async function main() {
             totalTCo2ePerYearHundredths,
             state: "estimate_recorded",
             methodVersion,
+            carbonCredit: {
+              contractAddress: carbonCreditAddress,
+              transactionHash: tokenReceipt?.hash ?? tokenTx.hash,
+              recipient: deployer.address,
+              symbol: "HC",
+              amountHundredths: totalTCo2ePerYearHundredths,
+            },
           };
         })();
 

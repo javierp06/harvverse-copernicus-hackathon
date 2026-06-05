@@ -10,7 +10,9 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "deploy:base-sepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
     "setup:demo": "hardhat run scripts/setup-demo.ts --network hardhat",
+    "setup:base-sepolia": "hardhat run scripts/setup-demo.ts --network baseSepolia",
     "verify:copernicus-local-chain": "hardhat run scripts/verify-local-copernicus-chain.ts --network hardhat",
     "write:copernicus-score": "hardhat run scripts/write-copernicus-score.ts --network hardhat"
   },
@@ -19,6 +21,7 @@
     "@openzeppelin/contracts": "^5.0.2",
     "@types/chai": "^4.3.20",
     "chai": "^4.5.0",
+    "dotenv": "catalog:",
     "hardhat": "^2.22.17"
   }
 }

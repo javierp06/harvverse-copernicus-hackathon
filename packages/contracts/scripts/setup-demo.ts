@@ -6,7 +6,7 @@
  *   pnpm setup:demo               (runs this script against localhost:8545)
  *
  * What it does:
- *  1. Deploys MockUSDC, HarvverseLot, HarvversePartnership, HarvverseEvidence, CarbonEstimateRegistry
+ *  1. Deploys MockUSDC, HarvverseLot, HarvversePartnership, HarvverseEvidence, CarbonEstimateRegistry, HarvverseCarbonCredit
  *  2. Grants OPERATOR_ROLE on HarvverseLot to the Partnership contract
  *  3. Registers the Finca Zafiro lot (HV-HN-ZAF-L02) on-chain
  *  4. Mints 10,000 mock USDC to the demo partner wallet (Hardhat accounts[1])
@@ -18,8 +18,8 @@ import { ethers, network } from "hardhat";
 import fs from "fs";
 import path from "path";
 
-// Finca Zafiro demo lot — must match seed.ts values
-const DEMO_LOT_CODE = "HV-HN-ZAF-L02";
+// Default Finca Zafiro demo lot. Override with LOT_CODE for a live DB lot.
+const DEFAULT_DEMO_LOT_CODE = "HV-HN-ZAF-L02";
 const DEMO_LOT = {
   targetYieldTenthsQq: 600,
   priceCentsPerLb: 350,
@@ -52,18 +52,22 @@ function toBytes32Hash(hash: string) {
 }
 
 async function main() {
-  const [deployer, demoPartner] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  const [deployer] = signers;
   const copernicusSnapshot = readCopernicusSnapshot();
+  const demoLotCode = process.env.LOT_CODE ?? copernicusSnapshot.lotCode ?? DEFAULT_DEMO_LOT_CODE;
+  const demoPartnerAddress = process.env.DEMO_PARTNER_ADDRESS ?? signers[1]?.address ?? deployer.address;
 
-  if (copernicusSnapshot.lotCode && copernicusSnapshot.lotCode !== DEMO_LOT_CODE) {
+  if (copernicusSnapshot.lotCode && copernicusSnapshot.lotCode !== demoLotCode) {
     throw new Error(
-      `Copernicus snapshot lotCode ${copernicusSnapshot.lotCode} does not match ${DEMO_LOT_CODE}`,
+      `Copernicus snapshot lotCode ${copernicusSnapshot.lotCode} does not match ${demoLotCode}`,
     );
   }
 
   console.log(`Network:          ${network.name}`);
   console.log(`Deployer:         ${deployer.address}`);
-  console.log(`Demo partner:     ${demoPartner.address}`);
+  console.log(`Demo lot code:    ${demoLotCode}`);
+  console.log(`Demo partner:     ${demoPartnerAddress}`);
 
   // 1 — Deploy contracts
   const MockUSDC = await ethers.getContractFactory("MockUSDC");
@@ -96,13 +100,19 @@ async function main() {
   const carbonRegistryAddress = await carbonRegistry.getAddress();
   console.log(`CarbonEstimateRegistry → ${carbonRegistryAddress}`);
 
+  const HarvverseCarbonCredit = await ethers.getContractFactory("HarvverseCarbonCredit");
+  const carbonCredit = await HarvverseCarbonCredit.deploy(deployer.address);
+  await carbonCredit.waitForDeployment();
+  const carbonCreditAddress = await carbonCredit.getAddress();
+  console.log(`HarvverseCarbonCredit → ${carbonCreditAddress}`);
+
   // 2 — Grant OPERATOR_ROLE on HarvverseLot to the Partnership contract
   const OPERATOR_ROLE = ethers.keccak256(ethers.toUtf8Bytes("OPERATOR_ROLE"));
   await lotContract.grantRole(OPERATOR_ROLE, partnershipAddress);
   console.log(`\nGranted OPERATOR_ROLE on HarvverseLot → HarvversePartnership`);
 
   // 3 — Register Finca Zafiro lot on-chain
-  const onchainLotId = ethers.keccak256(ethers.toUtf8Bytes(DEMO_LOT_CODE));
+  const onchainLotId = ethers.keccak256(ethers.toUtf8Bytes(demoLotCode));
   await lotContract.createLot(
     onchainLotId,
     deployer.address, // stand-in farmer for demo
@@ -111,7 +121,7 @@ async function main() {
     DEMO_LOT.ticketCents,
     DEMO_LOT.farmerShareBps,
   );
-  console.log(`Registered lot ${DEMO_LOT_CODE} on-chain (id: ${onchainLotId.slice(0, 10)}…)`);
+  console.log(`Registered lot ${demoLotCode} on-chain (id: ${onchainLotId.slice(0, 10)}…)`);
 
   await lotContract.updateCopernicusScore(
     onchainLotId,
@@ -126,13 +136,13 @@ async function main() {
 
   // 4 — Mint 10,000 mock USDC to demo partner
   const mintAmount = ethers.parseUnits("10000", 6);
-  await usdc.mint(demoPartner.address, mintAmount);
-  console.log(`Minted 10,000 USDC to demo partner (${demoPartner.address})`);
+  await usdc.mint(demoPartnerAddress, mintAmount);
+  console.log(`Minted 10,000 USDC to demo partner (${demoPartnerAddress})`);
 
   // 5 — Save deployment JSON
   const deploymentData = {
-    chainId: 31337,
-    network: "hardhat",
+    chainId: Number((await ethers.provider.getNetwork()).chainId),
+    network: network.name,
     deployer: deployer.address,
     contracts: {
       mockUsdc: usdcAddress,
@@ -140,8 +150,9 @@ async function main() {
       harvversePartnership: partnershipAddress,
       harvverseEvidence: evidenceAddress,
       carbonEstimateRegistry: carbonRegistryAddress,
+      harvverseCarbonCredit: carbonCreditAddress,
     },
-    demoPartnerWallet: demoPartner.address,
+    demoPartnerWallet: demoPartnerAddress,
   };
 
   const deploymentsDir = path.join(__dirname, "../deployments");
@@ -174,24 +185,27 @@ async function main() {
         !l.startsWith("NEXT_PUBLIC_USDC_ADDRESS") &&
         !l.startsWith("NEXT_PUBLIC_LOT_ADDRESS") &&
         !l.startsWith("NEXT_PUBLIC_PARTNERSHIP_ADDRESS") &&
-        !l.startsWith("NEXT_PUBLIC_CARBON_REGISTRY_ADDRESS"),
+        !l.startsWith("NEXT_PUBLIC_CARBON_REGISTRY_ADDRESS") &&
+        !l.startsWith("NEXT_PUBLIC_CARBON_CREDIT_ADDRESS"),
     );
 
   const newVars = [
     "",
     "# Local Hardhat demo contracts — written by pnpm setup:demo",
-    "NEXT_PUBLIC_USE_LOCAL_CONTRACTS=true",
-    "NEXT_PUBLIC_HARDHAT_CHAIN_ID=31337",
+    `NEXT_PUBLIC_USE_LOCAL_CONTRACTS=${network.name === "hardhat" ? "true" : "false"}`,
+    `NEXT_PUBLIC_HARDHAT_CHAIN_ID=${deploymentData.chainId}`,
     `NEXT_PUBLIC_USDC_ADDRESS=${usdcAddress}`,
     `NEXT_PUBLIC_LOT_ADDRESS=${lotAddress}`,
     `NEXT_PUBLIC_PARTNERSHIP_ADDRESS=${partnershipAddress}`,
     `NEXT_PUBLIC_CARBON_REGISTRY_ADDRESS=${carbonRegistryAddress}`,
+    `NEXT_PUBLIC_CARBON_CREDIT_ADDRESS=${carbonCreditAddress}`,
   ];
 
   fs.writeFileSync(envPath, [...filteredLines, ...newVars].join("\n") + "\n");
   console.log(`Updated apps/web/.env with NEXT_PUBLIC_ vars`);
 
-  console.log(`
+  if (network.name === "hardhat") {
+    console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║  Demo setup complete! Next steps:                           ║
 ║                                                              ║
@@ -206,10 +220,23 @@ async function main() {
 ║  4. The DB seed uses placeholder wallet addresses.           ║
 ║     Update FARMER_WALLET / PARTNER_WALLET in seed.ts to:    ║
 ║       FARMER_WALLET = ${deployer.address}  ║
-║       PARTNER_WALLET = ${demoPartner.address}  ║
+║       PARTNER_WALLET = ${demoPartnerAddress}  ║
 ║     Then run: pnpm db:seed                                   ║
 ╚══════════════════════════════════════════════════════════════╝
 `);
+  } else {
+    console.log(`
+╔══════════════════════════════════════════════════════════════╗
+║  Testnet demo setup complete.                               ║
+║                                                              ║
+║  Add these contract addresses to Vercel env and make sure    ║
+║  the demo partner wallet uses Base Sepolia.                  ║
+║                                                              ║
+║  Demo lot code: ${demoLotCode}
+║  Demo partner:  ${demoPartnerAddress}
+╚══════════════════════════════════════════════════════════════╝
+`);
+  }
 }
 
 main().catch((err) => {
