@@ -33,25 +33,188 @@ const sendBodySchema = z
     path: ["lotCode"],
   });
 
-function sentinelAgentBaseUrl() {
-  return (
-    process.env.SENTINEL_AGENT_BASE_URL ??
-    process.env.SENTINEL_AGENT_URL ??
-    "http://localhost:3099"
-  ).replace(/\/$/, "");
+const GUPSHUP_TEMPLATE_PARAM_LABELS = [
+  "Nombre farmer",
+  "Nombre finca",
+  "Código lote",
+  "Risk score",
+  "Yield range",
+  "URL pública QR",
+  "Mensaje completo",
+] as const;
+
+type ScenarioPayload = ReturnType<typeof buildSentinelAgentScenario> & { ok: true };
+
+function optionalEnv(value: string | undefined) {
+  return value && value.trim() ? value.trim() : null;
 }
 
-function sentinelAgentHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const key =
-    process.env.SENTINEL_AGENT_INBOUND_KEY ??
-    process.env.SENTINEL_AGENT_API_KEY;
-  if (key) {
-    headers["x-sentinel-agent-key"] = key;
+function templateEnvKey(templateKey: string) {
+  return `GUPSHUP_TEMPLATE_${templateKey.toUpperCase().replace(/-/g, "_")}`;
+}
+
+function resolveGupshupTemplateId(templateKey: string) {
+  const fromKey = optionalEnv(process.env[templateEnvKey(templateKey)]);
+  if (fromKey) return fromKey;
+
+  const defaultKey =
+    optionalEnv(process.env.GUPSHUP_DEFAULT_TEMPLATE_KEY) ??
+    "harvverse_sentinel_alert_v2";
+  if (templateKey === defaultKey) {
+    return optionalEnv(process.env.GUPSHUP_DEFAULT_TEMPLATE_ID);
   }
-  return headers;
+
+  return null;
+}
+
+function sanitizeParam(value: string) {
+  return value
+    .replace(/\r\n|\r|\n|\t/g, " ")
+    .replace(/ {5,}/g, "    ")
+    .trim();
+}
+
+function normalizePhoneE164(phone: string) {
+  return phone.replace(/\s+/g, "").replace(/^00/, "+");
+}
+
+function buildGupshupTemplateParams(data: ScenarioPayload, messageBodyOverride?: string) {
+  const ctx = data.context;
+  const signals = ctx.signals as Record<string, unknown> | undefined;
+  return [
+    ctx.farmer?.name ?? "caficultor",
+    ctx.lot.farmName ?? "tu finca",
+    ctx.lot.code,
+    ctx.snapshot?.riskScore != null ? String(ctx.snapshot.riskScore) : "—",
+    signals?.yieldRange != null ? String(signals.yieldRange) : "—",
+    ctx.publicUrl ?? "",
+    messageBodyOverride ?? data.message.body,
+  ].map(sanitizeParam);
+}
+
+function gupshupRequestPreview(destination: string, templateId: string, params: string[]) {
+  const appId = optionalEnv(process.env.GUPSHUP_APP_ID) ?? "(set GUPSHUP_APP_ID)";
+  const to = normalizePhoneE164(destination).replace(/^\+/, "");
+  return {
+    url: `https://partner.gupshup.io/partner/app/${appId}/template/msg`,
+    method: "POST" as const,
+    contentType: "application/x-www-form-urlencoded",
+    form: {
+      source: optionalEnv(process.env.GUPSHUP_SOURCE) ?? "(set GUPSHUP_SOURCE)",
+      destination: to,
+      "src.name": optionalEnv(process.env.GUPSHUP_APP_NAME) ?? "Harvverse",
+      template: JSON.stringify({
+        id: templateId || "(pending)",
+        params,
+      }),
+    },
+  };
+}
+
+function hasGupshupCredentials() {
+  return Boolean(
+    optionalEnv(process.env.GUPSHUP_APP_ID) &&
+      (optionalEnv(process.env.GUPSHUP_PARTNER_TOKEN) ??
+        optionalEnv(process.env.GUPSHUP_APP_TOKEN)) &&
+      optionalEnv(process.env.GUPSHUP_SOURCE),
+  );
+}
+
+async function dispatchGupshup(input: {
+  scenarioPayload: ScenarioPayload;
+  phone: string;
+  dryRun: boolean;
+}) {
+  const templateKey = input.scenarioPayload.whatsapp.templateKey;
+  const templateId = resolveGupshupTemplateId(templateKey);
+  const params = buildGupshupTemplateParams(input.scenarioPayload);
+  const destination = normalizePhoneE164(input.phone);
+  const requestPreview = gupshupRequestPreview(destination, templateId ?? "", params);
+  const dryRun = input.dryRun || !hasGupshupCredentials() || !templateId;
+
+  if (dryRun) {
+    return {
+      ok: true,
+      ai: {
+        used: false,
+        model: null,
+        source: "deterministic",
+        error: null,
+      },
+      gupshup: {
+        attempted: false,
+        delivered: false,
+        dryRun: true,
+        templateKey,
+        templateId,
+        variableLabels: input.scenarioPayload.whatsapp.variables,
+        params,
+        destination,
+        messageId: null,
+        requestPreview,
+        error: templateId ? null : "Template ID pendiente.",
+      },
+      outbound: {
+        messagePreview: input.scenarioPayload.message.body,
+      },
+    };
+  }
+
+  const token =
+    optionalEnv(process.env.GUPSHUP_PARTNER_TOKEN) ??
+    optionalEnv(process.env.GUPSHUP_APP_TOKEN);
+  const body = new URLSearchParams(requestPreview.form);
+  const response = await fetch(requestPreview.url, {
+    method: "POST",
+    headers: {
+      Authorization: token ?? "",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  });
+  const rawText = await response.text();
+  let payload: { messageId?: string; status?: string; message?: string } = {};
+  try {
+    payload = JSON.parse(rawText) as typeof payload;
+  } catch {
+    return {
+      ok: false,
+      ai: { used: false, model: null, source: "deterministic", error: null },
+      gupshup: {
+        attempted: true,
+        delivered: false,
+        dryRun: false,
+        templateKey,
+        templateId,
+        variableLabels: input.scenarioPayload.whatsapp.variables,
+        params,
+        destination,
+        messageId: null,
+        requestPreview,
+        error: `HTTP ${response.status} — respuesta no-JSON: ${rawText.slice(0, 300)}`,
+      },
+      outbound: { messagePreview: input.scenarioPayload.message.body },
+    };
+  }
+
+  return {
+    ok: response.ok,
+    ai: { used: false, model: null, source: "deterministic", error: null },
+    gupshup: {
+      attempted: true,
+      delivered: response.ok,
+      dryRun: false,
+      templateKey,
+      templateId,
+      variableLabels: input.scenarioPayload.whatsapp.variables,
+      params,
+      destination,
+      messageId: payload.messageId ?? null,
+      requestPreview,
+      error: response.ok ? null : payload.message ?? `HTTP ${response.status}`,
+    },
+    outbound: { messagePreview: input.scenarioPayload.message.body },
+  };
 }
 
 export async function POST(request: Request) {
@@ -102,41 +265,25 @@ export async function POST(request: Request) {
         phone,
       },
     },
-  };
-  const url = new URL(`${sentinelAgentBaseUrl()}/api/scenarios`);
-  url.searchParams.set("inline", "1");
-  url.searchParams.set("llm", parsed.data.llm);
-  if (parsed.data.dryRun) {
-    url.searchParams.set("dryRun", "1");
-  }
-
-  let response: Response;
+  } satisfies ScenarioPayload;
   try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: sentinelAgentHeaders(),
-      body: JSON.stringify(scenarioPayload),
+    const sentinelAgent = await dispatchGupshup({
+      scenarioPayload,
+      phone,
+      dryRun: parsed.data.dryRun,
+    });
+
+    return Response.json({
+      ok: true,
+      scenario: scenarioPayload,
+      sentinelAgent,
     });
   } catch (error) {
     return jsonError(
       error instanceof Error
-        ? `Sentinel Agent request failed: ${error.message}`
-        : "Sentinel Agent request failed.",
+        ? `Sentinel Agent processing failed: ${error.message}`
+        : "Sentinel Agent processing failed.",
       502,
-      { sentinelAgentUrl: url.origin },
     );
   }
-
-  const sentinelAgent = await response.json().catch(() => null);
-  if (!response.ok) {
-    return jsonError("Sentinel Agent returned an error.", response.status, {
-      sentinelAgent,
-    });
-  }
-
-  return Response.json({
-    ok: true,
-    scenario: scenarioPayload,
-    sentinelAgent,
-  });
 }

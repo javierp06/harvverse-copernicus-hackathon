@@ -427,8 +427,8 @@ export default function SentinelDemoAdminPage() {
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-white/60 md:text-base">
               Previsualiza el contexto, base de conocimiento, borrador en español y variables de
-              WhatsApp. También puede enviar el payload al servicio Sentinel Agent de Sheyla para
-              ejecutar AI SDK y Gupshup en dry-run o envío real.
+              WhatsApp. También puede ejecutar Sentinel Agent desde este deploy para enviar el
+              mensaje determinístico por Gupshup en dry-run o envío real.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -575,8 +575,8 @@ export default function SentinelDemoAdminPage() {
                       </SelectContent>
                     </Select>
                     <p className="mt-2 text-xs leading-relaxed text-white/45">
-                      El envío real requiere que `packages/sentinel-agent` esté corriendo o
-                      desplegado con credenciales de Gupshup y template aprobado.
+                      El envío real requiere credenciales de Gupshup y template aprobado en las
+                      variables de entorno del deploy.
                     </p>
                   </div>
                 </div>
