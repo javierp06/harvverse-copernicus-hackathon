@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { Fingerprint } from "lucide-react";
 
-import { Badge } from "@harvverse-copernicus-hackathon/ui/components/badge";
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 import { chainLabel, transactionExplorerUrl } from "@/lib/chainProof";
 import { shortHash, type CopernicusSnapshotView } from "@/lib/copernicus-snapshot";
@@ -12,13 +11,6 @@ import { CopernicusProofRow, CopernicusSectionHeader } from "./copernicus-ui";
 
 export function CopernicusProofCard({ snapshot }: { snapshot: CopernicusSnapshotView }) {
   const t = useTranslations("lot_proof");
-
-  function confidenceLabel(conf: string) {
-    if (conf === "low") return t("low");
-    if (conf === "medium") return t("medium");
-    if (conf === "high") return t("high");
-    return conf;
-  }
 
   function metadataLabel(status: "pending" | "written") {
     return status === "written" ? t("local_proof_verified") : t("local_proof_pending");
@@ -66,24 +58,7 @@ export function CopernicusProofCard({ snapshot }: { snapshot: CopernicusSnapshot
             snapshot.chain.transactionHash,
           )}
         />
-        <CopernicusProofRow
-          label={t("confidence")}
-          value={confidenceLabel(snapshot.dataQuality.confidence)}
-          description={t("proof_help.confidence")}
-        />
       </div>
-      {snapshot.sources.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {snapshot.sources.map((source) => (
-            <Badge
-              key={`${source.key}-${source.dataset}`}
-              className="rounded-full border-white/10 bg-white/[0.04] text-[10px] text-white/50"
-            >
-              {source.dataset}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
     </GlassCard>
   );
 }

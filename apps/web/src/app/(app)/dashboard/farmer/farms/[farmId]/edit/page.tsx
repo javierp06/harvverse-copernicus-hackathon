@@ -302,6 +302,8 @@ export default function EditFarmPage() {
                           placeholder="e.g., HON-001"
                           className={inputClasses}
                           {...field}
+                          value={field.value ?? ""}
+                          onChange={(event) => field.onChange(event.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -380,6 +382,8 @@ export default function EditFarmPage() {
                           placeholder="e.g., Siguatepeque"
                           className={inputClasses}
                           {...field}
+                          value={field.value ?? ""}
+                          onChange={(event) => field.onChange(event.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -394,7 +398,13 @@ export default function EditFarmPage() {
                     <FormItem>
                       <FormLabel className="text-white/80">{t("region")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Cielito Mountain" className={inputClasses} {...field} />
+                        <Input
+                          placeholder="e.g., Cielito Mountain"
+                          className={inputClasses}
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(event) => field.onChange(event.target.value)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -469,6 +479,8 @@ export default function EditFarmPage() {
                             placeholder="e.g., Natural spring"
                             className={inputClasses}
                             {...field}
+                            value={field.value ?? ""}
+                            onChange={(event) => field.onChange(event.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -487,6 +499,8 @@ export default function EditFarmPage() {
                             placeholder="e.g., Dirt road, 4x4 recommended"
                             className={inputClasses}
                             {...field}
+                            value={field.value ?? ""}
+                            onChange={(event) => field.onChange(event.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -507,6 +521,8 @@ export default function EditFarmPage() {
                             placeholder="e.g., Inga, Cedar, Fruit trees"
                             className={inputClasses}
                             {...field}
+                            value={field.value ?? ""}
+                            onChange={(event) => field.onChange(event.target.value)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -624,6 +640,8 @@ export default function EditFarmPage() {
                         placeholder={t("description_placeholder")}
                         className="bg-black/20 border-white/10 text-white placeholder:text-white/20 min-h-[100px] text-sm"
                         {...field}
+                        value={field.value ?? ""}
+                        onChange={(event) => field.onChange(event.target.value)}
                       />
                     </FormControl>
                     <FormMessage />

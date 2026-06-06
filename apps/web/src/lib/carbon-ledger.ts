@@ -1,5 +1,12 @@
 import type { CopernicusSnapshotView } from "@/lib/copernicus-snapshot";
 
+export const CARBON_LEDGER_UPDATED_EVENT = "harvverse-carbon-ledger-updated";
+
+export function notifyCarbonLedgerUpdated() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(CARBON_LEDGER_UPDATED_EVENT));
+}
+
 export type CarbonLedgerState = {
   availableTCo2e: number;
   hcBalance: number;

@@ -270,10 +270,11 @@ export default function FarmerLotDetailPage() {
 
           {parsedCopernicusSnapshot ? (
             <div className="space-y-5">
+              <CopernicusSignalsGrid snapshot={parsedCopernicusSnapshot} />
+
               <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
                 <div className="flex flex-col gap-4">
                   <CopernicusRiskScoreCard snapshot={parsedCopernicusSnapshot} />
-                  <CopernicusSignalsGrid snapshot={parsedCopernicusSnapshot} />
                   <LotAgronomicNotes lot={lot} t={t} />
                 </div>
                 <div className="flex flex-col gap-4">

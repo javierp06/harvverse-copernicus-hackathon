@@ -12,7 +12,7 @@ import { Button } from "@harvverse-copernicus-hackathon/ui/components/button";
 import { GlassCard } from "@harvverse-copernicus-hackathon/ui/components/glass-card";
 import { Skeleton } from "@harvverse-copernicus-hackathon/ui/components/skeleton";
 
-import { formatCarbon, issueCarbonLedgerCredit } from "@/lib/carbon-ledger";
+import { CARBON_LEDGER_UPDATED_EVENT, formatCarbon, issueCarbonLedgerCredit, notifyCarbonLedgerUpdated } from "@/lib/carbon-ledger";
 import { buildCarbonCreditPortfolio } from "@/lib/carbon-portfolio";
 import { transactionExplorerUrl } from "@/lib/chainProof";
 import { shortHash } from "@/lib/copernicus-snapshot";
@@ -113,6 +113,16 @@ export default function FarmerCarbonCreditsPage() {
     if (!farmsLoading) setLedgerRefresh(Date.now());
   }, [farmsLoading, farms]);
 
+  useEffect(() => {
+    const refreshLedger = () => setLedgerRefresh(Date.now());
+    window.addEventListener(CARBON_LEDGER_UPDATED_EVENT, refreshLedger);
+    window.addEventListener("storage", refreshLedger);
+    return () => {
+      window.removeEventListener(CARBON_LEDGER_UPDATED_EVENT, refreshLedger);
+      window.removeEventListener("storage", refreshLedger);
+    };
+  }, []);
+
   const portfolio = useMemo(
     () =>
       buildCarbonCreditPortfolio(farms ?? [], (storageKey) =>
@@ -126,6 +136,7 @@ export default function FarmerCarbonCreditsPage() {
     if (!row || row.ledger.availableTCo2e <= 0) return;
     const nextLedger = issueCarbonLedgerCredit(row.ledger, scoreHash);
     window.localStorage.setItem(storageKey, JSON.stringify(nextLedger));
+    notifyCarbonLedgerUpdated();
     setLedgerRefresh(Date.now());
   }
 

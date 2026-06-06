@@ -12,6 +12,7 @@ import {
   carbonLedgerStorageKey,
   formatCarbon,
   issueCarbonLedgerCredit,
+  notifyCarbonLedgerUpdated,
   parseCarbonLedger,
   positiveNumber,
   roundCarbon,
@@ -177,16 +178,26 @@ function CarbonCreditSimulation({
   const issueCarbonToken = () => {
     if (!canIssue) return;
 
-    setLedger((current) => issueCarbonLedgerCredit(current, scoreHash));
+    setLedger((current) => {
+      const next = issueCarbonLedgerCredit(current, scoreHash);
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+      notifyCarbonLedgerUpdated();
+      return next;
+    });
   };
 
   const addNextCycleEstimate = () => {
     if (annualEstimate <= 0) return;
 
-    setLedger((current) => ({
-      ...current,
-      availableTCo2e: roundCarbon(current.availableTCo2e + annualEstimate),
-    }));
+    setLedger((current) => {
+      const next = {
+        ...current,
+        availableTCo2e: roundCarbon(current.availableTCo2e + annualEstimate),
+      };
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+      notifyCarbonLedgerUpdated();
+      return next;
+    });
   };
 
   return (
