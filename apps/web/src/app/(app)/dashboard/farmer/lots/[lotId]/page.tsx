@@ -485,7 +485,7 @@ export default function FarmerLotDetailPage() {
           )}
         </GlassCard>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)]">
           {activePlan && (() => {
           const farmerSharePct = (activePlan.splitFarmerBps ?? 0) / 100;
           const partnerSharePct = (activePlan.splitPartnerBps ?? 0) / 100;
