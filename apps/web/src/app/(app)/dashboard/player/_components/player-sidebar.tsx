@@ -38,7 +38,7 @@ export default function PlayerSidebar({ isMobileOpen, onClose }: Props) {
   }
 
   return (
-    <aside className={`w-60 border-r border-white/10 bg-[#000d1a]/95 flex-col h-screen transition-transform ${isMobileOpen ? "fixed inset-y-0 left-0 z-40 flex" : "hidden md:flex sticky top-0"}`}>
+    <aside className={`w-60 shrink-0 overflow-y-auto border-r border-white/10 bg-[#000d1a]/95 flex-col h-screen transition-transform ${isMobileOpen ? "fixed inset-y-0 left-0 z-40 flex" : "hidden md:flex sticky top-0"}`}>
       <div className="border-b border-white/10 px-5 py-6">
         <Link href="/dashboard/player" className="flex items-center">
           <img

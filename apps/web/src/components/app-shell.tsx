@@ -14,7 +14,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const close = () => setSidebarOpen(false);
 
   return (
-    <div className="min-h-screen bg-[#001020] text-white">
+    <div className="h-screen overflow-hidden bg-[#001020] text-white">
       {/* Atmospheric elements */}
       <div className="atmosphere-blob top-[-10%] right-[-10%] size-[280px] md:size-[500px] bg-primary/20" />
       <div className="atmosphere-blob bottom-[5%] left-[-5%] size-[220px] md:size-[400px] bg-[#67B9C1]/20" />
@@ -47,14 +47,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
         />
       )}
 
-      <div className="flex">
+      <div className="flex h-full">
         <AppSidebar isMobileOpen={sidebarOpen} onClose={close} />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 hidden h-14 shrink-0 items-center justify-end gap-3 border-b border-white/5 bg-[#000d1a]/95 px-6 backdrop-blur-md md:flex lg:px-8">
             <LanguageSwitcher />
             <UserButton />
           </header>
-          <main className="min-h-screen flex-1 overflow-y-auto overflow-x-hidden p-4 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:p-6 md:p-8 md:pt-8">
+          <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:p-6 md:p-8 md:pt-8">
             {children}
           </main>
         </div>
