@@ -159,21 +159,21 @@ export default function SentinelDemoAdminPage() {
     [selectedScenario],
   );
   const {
-    data: availableLots = [],
+    data: demoLots = [],
     isLoading: lotsLoading,
     isError: lotsError,
-  } = useQuery(trpc.lots.list.queryOptions({ status: "available" }));
+  } = useQuery(trpc.lots.list.queryOptions({}));
   const selectedLot = useMemo(
-    () => availableLots.find((lot) => lot.code === lotCode) ?? null,
-    [availableLots, lotCode],
+    () => demoLots.find((lot) => lot.code === lotCode) ?? null,
+    [demoLots, lotCode],
   );
 
   useEffect(() => {
-    if (!lotCode && availableLots.length > 0) {
-      const firstCode = availableLots[0]?.code;
+    if (!lotCode && demoLots.length > 0) {
+      const firstCode = demoLots[0]?.code;
       if (firstCode) setLotCode(firstCode);
     }
-  }, [availableLots, lotCode]);
+  }, [demoLots, lotCode]);
 
   async function sendScenario() {
     setIsDispatching(true);
@@ -273,7 +273,7 @@ export default function SentinelDemoAdminPage() {
                   <Select
                     value={lotCode}
                     onValueChange={(value) => setLotCode(value ?? "")}
-                    disabled={lotsLoading || lotsError || availableLots.length === 0}
+                    disabled={lotsLoading || lotsError || demoLots.length === 0}
                   >
                     <SelectTrigger className="min-h-11 border-white/15 bg-black/20 text-white">
                       <SelectValue
@@ -287,7 +287,7 @@ export default function SentinelDemoAdminPage() {
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableLots.map((lot) => (
+                      {demoLots.map((lot) => (
                         <SelectItem key={lot.id} value={lot.code ?? String(lot.id)}>
                           {lot.code ?? `Lote ${lot.id}`} · {lot.farmName}
                         </SelectItem>
